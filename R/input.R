@@ -482,6 +482,10 @@ init_input <- function() {
   input_ref$diagnosis$logit_p_overdiagnosis_by_sex <- "Kate's regression on CanCOLD, provided on 2019-07-16"
   input$diagnosis$p_correct_overdiagnosis <- 0.9
 
+  #random diagnosis variable #safa
+  input_help$diagnosis$xxe <- "Proportion adherent to medication"
+  input$diagnosus$xx <- 1
+  input_ref$diagnosis$xx <- ""
 
   ## Medication;
 
@@ -492,36 +496,68 @@ init_input <- function() {
 
   # medication log-hazard regression matrix for initiation of each medication
   input_help$medication$medication_ln_hr_exac <- "Rate reduction in exacerbations due to treatment"
-  input$medication$medication_ln_hr_exac<-c(None=0, SABA=0, LABA=log((1-0.20)^input$medication$medication_adherence),
+  input$medication$medication_ln_hr_exac<-c(None=0,
+                                            SABA=0, LABA=log((1-0.20)^input$medication$medication_adherence),
                                             SABA_LABA=log((1-0.20)^input$medication$medication_adherence),
                                             LAMA=log((1-0.22)^input$medication$medication_adherence),
                                             LAMA_SABA=log((1-0.22)^input$medication$medication_adherence),
                                             LAMA_LABA=log((1-0.23)^input$medication$medication_adherence),
-                                            LAMA_LAMA_SABA=log((1-0.23)^input$medication$medication_adherence),
+                                            LAMA_LABA_SABA=log((1-0.23)^input$medication$medication_adherence),
                                             ICS=log((1-0.19)^input$medication$medication_adherence),
                                             ICS_SABA=log((1-0.19)^input$medication$medication_adherence),
                                             ICS_LABA=log((1-0.25)^input$medication$medication_adherence),
                                             ICS_LABA_SABA=log((1-0.25)^input$medication$medication_adherence),
-                                            ICS_LAMA=log(1^input$medication$medication_adherence),
-                                            ICS_LAMA_SABA=log(1^input$medication$medication_adherence),
+                                            ICS_LAMA=log((1-0.25)^input$medication$medication_adherence),
+                                            ICS_LAMA_SABA=log((1-0.25)^input$medication$medication_adherence),
                                             ICS_LAMA_LABA=log((1-0.34)^input$medication$medication_adherence),
-                                            ICS_LAMA_LABA_SABA=log((1-0.34)^input$medication$medication_adherence))
+                                            ICS_LAMA_LABA_SABA=log((1-0.34)^input$medication$medication_adherence),
+
+                                            #Safa's update:
+                                            SABA_AZT=log((1-0.31)^input$medication$medication_adherence),
+                                            LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
+                                            SABA_LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
+                                            LAMA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
+                                            LAMA_SABA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
+                                            LAMA_LABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
+                                            LAMA_LABA_SABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
+                                            ICS_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
+                                            ICS_SABA_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
+                                            ICS_LABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            ICS_LABA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            ICS_LAMA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            ICS_LAMA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            ICS_LAMA_LABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
+                                            ICS_LAMA_LABA_SABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
+                                            )
+
+
   input_ref$medication$medication_ln_hr_exac <- "LAMA-Zhou et al. 2017, LAMA/LABA-UPLIFT 2008, ICS/LAMA/LABA-KRONOS 2018"
 
   # cost of medications
   input_help$medication$medication_costs <- "Costs of treatment"
   input$medication$medication_costs <-c(None=0,SABA=72.15*input$medication$medication_adherence, LABA=0, SABA_LABA=0,
                                         LAMA=479.35*input$medication$medication_adherence, LAMA_SABA=0,
-                                        LAMA_LABA=876.76*input$medication$medication_adherence, LAMA_LAMA_SABA=0,
+                                        LAMA_LABA=876.76*input$medication$medication_adherence, LAMA_LABA_SABA=0,
                                         ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0, ICS_LAMA_SABA=0,
-                                        ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0)
+                                        ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0,
+                                        #Safa's update:
+                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
+                                        LAMA_AZT=0, LAMA_SABA_AZT=0,
+                                        LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
+                                        ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
+                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$medication$medication_costs <- "BC administrative data"
 
   # utility from medications
   input_help$medication$medication_utility <- "Utility addition from treatment"
   input$medication$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
-                                        LAMA_LAMA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
-                                        ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0)
+                                        LAMA_LABA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
+                                        ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0,
+                                        #Safa's update:
+                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
+                                        LAMA_AZT=0, LAMA_SABA_AZT=0, LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
+                                        ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
+                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$medication$medication_utility <- "Lambe et al. Thorax 2019"
 
   # medication event - disabled
@@ -609,6 +645,10 @@ init_input <- function() {
     ,female =c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-0.00077,0.000204044403520189,0.00012527721873265,9.38179764267892e-05,8.52310693595392e-05,2.0948736613633e-05,0.000112963841564107,0.00010433676504019,5.4970941674673e-05,8.40452455971427e-05,7.13507996050295e-05,-5.32163960539644e-05,0.000108600166102096,-2.58547086080699e-05,-3.39656984665966e-05,-0.000104561408155271,-7.61106203700976e-05,-0.000145376981544917,-8.95689640121699e-05,-0.000166434371840576,0.000243219925937975,0.0008650546976534,0.000930888336636944,0.00101216109953299,0.00123284222432014,0.00133853130591277,0.00144269885860267,0.00168219643935857,0.00180689077125785,0.00189747191320053,0.00189498835689917,0.00144977074941933,0.00152408964706417,0.00171179411065646,0.00188158359328075,0.00200917449209433,0.00255429028811746,0.00251462637075366,0.00297904911157468,0.00305247152311787,0.00305909639703686,0.00247270876123033,0.00263944132927282,0.00297318580456147,0.00399439553966772,0.00430369126521429,0.00519320421612733,0.00694185653392955,0.00759956858672857,0.00934224983773695,0.0112825987417631,0.0127892562246108,0.0174914683720296,0.0188209248942959,0.0219164492207358,0.0264718581662204,0.0301728155832754,0.0330406840844788,0.0374281244493398,0.0432518126953188,0.0531098375652765,0.0623997534486314,0.0591768901970186,0.0737223620452372,0.0753080451656278,0.104676330930181,0.108606384925549,0.156783719504522,0.114000430396816,0.191472188310203,0,0
 
     ))
+
+
+  ## TEST
+
 
   #  input$manual$explicit_mortality_by_age_sex <- input$manual$explicit_mortality_by_age_sex * 1000000000000
 

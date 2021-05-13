@@ -90,12 +90,12 @@ agent_creation_mode<-c(
 */
 
 
-
+//None, SABA, LABA, SABA_LABA,LAMA,LAMA_SABA,LAMA_LABA,LAMA_LAMA_SABA,ICS,ICS_SABA,ICS_LABA,ICS_LABA_SABA,ICS_LAMA,ICS_LAMA_SABA,ICS_LAMA_LABA,ICS_LAMA_LABA_SABA,
 
 enum medication_classes
 {
-MED_CLASS_SABA=1,
-MED_CLASS_LABA=2,
+MED_CLASS_SABA=1, // 0.0001
+MED_CLASS_LABA=2, // 0.0010
 MED_CLASS_LAMA=4,
 MED_CLASS_ICS=8,
 MED_CLASS_MACRO=16,
@@ -975,7 +975,7 @@ struct agent
   double age_baseline; //Age at the time of getting COPD. Used for FEV1 Decline. Amin
 
   double time_at_creation;
-  double followup_time; //Time since COPD?
+  double followup_time;
 
   double height;
   double weight;
@@ -999,6 +999,9 @@ struct agent
   int local_time_at_COPD;
   double _pred_fev1;
 
+  double local_time_at_AZT; //Safa
+  bool AZT_flag; //Safa
+
   double ln_exac_rate_intercept;   //backround rate of exacerbation (intercept only);
   double logit_exac_severity_intercept;   //backround severity of exacerbation (intercept only);
 
@@ -1010,6 +1013,9 @@ struct agent
 
   double exac_history_time_first, exac_history_time_second;
   int exac_history_severity_first, exac_history_severity_second;
+
+  double notmild_exac_history_time_first, notmild_exac_history_time_second; //Safa
+  int notmild_exac_history_severity_first, notmild_exac_history_severity_second;  //Safa
 
   double symptom_score;
 
@@ -1135,6 +1141,9 @@ List get_agent(agent *ag)
   out["fev1_tail"] = (*ag).fev1_tail;
   out["gold"] = (*ag).gold;
   out["local_time_at_COPD"]=(*ag).local_time_at_COPD;
+
+  out["local_time_at_AZT"]=(*ag).local_time_at_AZT; //Safa
+  out["AZT_flag"]=(*ag).AZT_flag; //Safa
 
   out["tte"] = (*ag).tte;
   out["event"] = (*ag).event;
@@ -2045,9 +2054,27 @@ double update_prevalent_diagnosis(agent *ag)
   return(0);
 }
 
+//--------------------------- AZITHROMYCIN - Safa------------------------------------------
+double update_AZT(agent *ag) {  //if criteria met, update medication!
 
+  if((*ag).diagnosis==1 && (*ag).AZT_flag == false && (
+     ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1))
+    )
+  {
+    // message("INSIDE AZT function=%f\n",1.1);
+    if (rand_unif() < input.medication.medication_adherence)
+    {
+      (*ag).medication_status= max((*ag).medication_status | MED_CLASS_MACRO, (*ag).medication_status);
+      (*ag).AZT_flag = true;
+      (*ag).local_time_at_AZT = (*ag).local_time;
+      medication_LPT(ag);
+    }
+  }
 
-////
+  return(0);
+}
+//--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
+
 
 
 agent *create_agent(agent *ag,int id)
@@ -2066,6 +2093,10 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 (*ag).weight_baseline = 0; //resetting the value for new agent
 (*ag).followup_time = 0; //resetting the value for new agent
 (*ag).local_time_at_COPD = 0; //resetting the value for new agent
+
+(*ag).AZT_flag = false; //Safa
+(*ag).local_time_at_AZT = 0; //Safa
+
 (*ag).cough = 0;
 (*ag).phlegm  = 0;
 (*ag).wheeze  = 0;
@@ -2197,6 +2228,9 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
 
   (*ag).exac_history_time_first=0;
   (*ag).exac_history_time_second=0;
+
+  (*ag).notmild_exac_history_time_first=0; //Safa
+  (*ag).notmild_exac_history_time_second=-0; //Safa
 
   //COPD;
   double COPD_odds=exp(input.COPD.logit_p_COPD_betas_by_sex[0][(*ag).sex]
@@ -2675,8 +2709,8 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 // [[Rcpp::export]]
 NumericMatrix Cget_all_events_matrix()
 {
-  NumericMatrix outm(event_stack_pointer,31);
-  CharacterVector eventMatrixColNames(31);
+  NumericMatrix outm(event_stack_pointer,33);
+  CharacterVector eventMatrixColNames(33);
 
 // eventMatrixColNames = CharacterVector::create("id", "local_time","sex", "time_at_creation", "age_at_creation", "pack_years","gold","event","FEV1","FEV1_slope", "FEV1_slope_t","pred_FEV1","smoking_status", "localtime_at_COPD", "age_at_COPD", "weight_at_COPD", "height","followup_after_COPD", "FEV1_baseline");
 // 'create' helper function is limited to 20 enteries
@@ -2712,6 +2746,8 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(28) = "case_detection";
   eventMatrixColNames(29) = "cumul_cost";
   eventMatrixColNames(30) = "cumul_qaly";
+  eventMatrixColNames(31) = "local_time_at_AZT";
+  eventMatrixColNames(32) = "AZT_flag";
 
 
   colnames(outm) = eventMatrixColNames;
@@ -2749,8 +2785,10 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,28)=(*ag).case_detection;
     outm(i,29)=(*ag).cumul_cost;
     outm(i,30)=(*ag).cumul_qaly;
-  }
 
+    outm(i,31)=(*ag).local_time_at_AZT;
+    outm(i,32)=(*ag).AZT_flag;
+  }
   return(outm);
 }
 
@@ -2946,7 +2984,7 @@ double event_exacerbation_tte(agent *ag)
                     +input.exacerbation.ln_rate_betas[6]*((*ag).gold==3)
                     +input.exacerbation.ln_rate_betas[7]*((*ag).gold==4)
 
-                    +input.medication.medication_ln_hr_exac[(*ag).medication_status] );
+                    +input.medication.medication_ln_hr_exac[(*ag).medication_status] ); //safa: hazard ratio of AZT affect exac_rate
 
   (*ag).tmp_exac_rate= rate;
 
@@ -3012,13 +3050,13 @@ void event_exacerbation_process(agent *ag)
 #endif
 
 #if (OUTPUT_EX & OUTPUT_EX_EXACERBATION)>0
-  output_ex.n_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1;
-  output_ex.n_exac_by_ctime_severity[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
+  output_ex.n_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1; //safa: what is this? In each year how many exacerbations we had for different ages?
+  output_ex.n_exac_by_ctime_severity[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1; //safa: number of severe exacs for each year
   output_ex.n_exac_by_gold_severity[(*ag).gold-1][(*ag).exac_status-1]+=1;
   if ((*ag).diagnosis==1) output_ex.n_exac_by_gold_severity_diagnosed[(*ag).gold-1][(*ag).exac_status-1]+=1;
   output_ex.n_exac_by_ctime_severity_female[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=(*ag).sex;
   output_ex.n_exac_by_ctime_GOLD[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).gold-1]+=1;
-  if ((*ag).exac_status > 2) output_ex.n_severep_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1;
+  if ((*ag).exac_status > 2) output_ex.n_severep_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1; //safa: number of severe exacs for each year and age
   if ((*ag).diagnosis==0 && (*ag).gold>0) output_ex.n_exac_by_ctime_severity_undiagnosed[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
   if ((*ag).diagnosis==1 && (*ag).gold>0) output_ex.n_exac_by_ctime_severity_diagnosed[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
 
@@ -3026,6 +3064,14 @@ void event_exacerbation_process(agent *ag)
 
   double hosp_diagnosis;
 
+  //Safa: maybe you can replace these with the previous ones because no one needs not-mild previous exacerbation anyway
+  if((*ag).exac_status > 1)
+  {
+    (*ag).notmild_exac_history_time_second=(*ag).notmild_exac_history_time_first;
+    (*ag).notmild_exac_history_severity_second=(*ag).notmild_exac_history_severity_first;
+    (*ag).notmild_exac_history_time_first=(*ag).local_time;
+    (*ag).notmild_exac_history_severity_first=(*ag).exac_status;
+  }
 
   //Update exacerbation history
   (*ag).exac_history_time_second=(*ag).exac_history_time_first;
@@ -3070,7 +3116,7 @@ void event_exacerbation_process(agent *ag)
   }
 
   if((*ag).diagnosis==1 && (*ag).dyspnea==0 && (((*ag).exac_status>2) |
-     ((*ag).exac_history_severity_first==2 && ((*ag).local_time - (*ag).exac_history_time_first) <1 &&
+     ((*ag).exac_history_severity_first==2 && ((*ag).local_time - (*ag).exac_history_time_first) <1 && // safa: shouldn't you update the history after all these?
      (*ag).exac_history_severity_second==2 && ((*ag).local_time - (*ag).exac_history_time_second) <1)))
   {
         if (rand_unif() < input.medication.medication_adherence)
@@ -3086,7 +3132,7 @@ void event_exacerbation_process(agent *ag)
   {
       if (rand_unif() < input.medication.medication_adherence)
         {
-          (*ag).medication_status=MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA;
+          (*ag).medication_status= max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA , (*ag).medication_status);
           medication_LPT(ag);
         }
   }
@@ -3472,6 +3518,8 @@ agent *event_fixed_process(agent *ag)
   update_symptoms(ag); //updating in the annual event
   update_gpvisits(ag);
   update_diagnosis(ag);
+  update_AZT(ag); // Safa: criteria_met => AZT_flag = TRUE + years in study monitored + update everything else
+
 
 #ifdef OUTPUT_EX
   update_output_ex(ag);
@@ -3702,9 +3750,9 @@ int Cmodel(int max_n_agents)
     }
 
 
-    while(calendar_time+(*ag).local_time<input.global_parameters.time_horizon && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
+    while((calendar_time+(*ag).local_time<input.global_parameters.time_horizon) && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
     {
-      double tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;;
+      double tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
       int winner=-1;
       double temp;
 
@@ -3871,6 +3919,154 @@ int Cmodel(int max_n_agents)
         (*ag).local_time=(*ag).local_time+(*ag).tte;
       }
     }//while (within agent)
+
+
+    //----------------------------Safa: Continue to follow patients who received AZT --------------------
+
+    // if((*ag).AZT_flag){
+    //
+    //
+    //
+    //   while(calendar_time+(*ag).local_time < input.global_parameters.time_horizon+(*ag).local_time_at_AZT && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
+    //     {
+    //       double tte=input.global_parameters.time_horizon+(*ag).local_time_at_AZT-calendar_time-(*ag).local_time;
+    //       int winner=-1;
+    //       double temp;
+    //
+    //       temp=event_fixed_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_fixed;
+    //       }
+    //
+    //       temp=event_birthday_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_birthday;
+    //       }
+    //
+    //       temp=event_smoking_change_tte(ag);
+    //       //   if(temp<tte && (*ag).gold==0)  //for debug porpuses, no smoking change when COPD is present
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_smoking_change;
+    //       }
+    //
+    //       temp=event_COPD_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_COPD;
+    //       }
+    //
+    //       temp=event_exacerbation_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_exacerbation;
+    //       }
+    //
+    //       temp=event_exacerbation_end_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_exacerbation_end;
+    //       }
+    //
+    //       temp=event_exacerbation_death_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_exacerbation_death;
+    //       }
+    //
+    //       temp=event_doctor_visit_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_doctor_visit;
+    //       }
+    //
+    //       temp=event_bgd_tte(ag);
+    //       if(temp<tte)
+    //       {
+    //         tte=temp;
+    //         winner=event_bgd;
+    //       }
+    //
+    //
+    //       if(calendar_time+(*ag).local_time+tte<input.global_parameters.time_horizon+(*ag).local_time_at_AZT)
+    //       {
+    //         (*ag).tte=tte;
+    //         (*ag).local_time=(*ag).local_time+tte;
+    //
+    //         if(settings.update_continuous_outcomes_mode==1)
+    //         {
+    //           lung_function_LPT(ag);
+    //           smoking_LPT(ag);
+    //           exacerbation_LPT(ag);
+    //           payoffs_LPT(ag);
+    //           medication_LPT(ag);
+    //         }
+    //
+    //         switch(winner)
+    //         {
+    //         case event_fixed:
+    //           event_fixed_process(ag);
+    //           (*ag).event=event_fixed;
+    //           break;
+    //         case event_birthday:
+    //           event_birthday_process(ag);
+    //           (*ag).event=event_birthday;
+    //           break;
+    //         case event_smoking_change:
+    //           event_smoking_change_process(ag);
+    //           (*ag).event=event_smoking_change;
+    //           break;
+    //         case event_COPD:
+    //           event_COPD_process(ag);
+    //           (*ag).event=event_COPD;
+    //           break;
+    //         case event_exacerbation:
+    //           event_exacerbation_process(ag);
+    //           (*ag).event=event_exacerbation;
+    //           break;
+    //         case event_exacerbation_end:
+    //           event_exacerbation_end_process(ag);
+    //           (*ag).event=event_exacerbation_end;
+    //           break;
+    //         case event_exacerbation_death:
+    //           event_exacerbation_death_process(ag);
+    //           (*ag).event=event_exacerbation_death;
+    //           break;
+    //         case event_doctor_visit:
+    //           event_doctor_visit_process(ag);
+    //           (*ag).event=event_doctor_visit;
+    //           break;
+    //
+    //         case event_bgd:
+    //           event_bgd_process(ag);
+    //           (*ag).event=event_bgd;
+    //           break;
+    //         }
+    //         if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_some_event)
+    //         {
+    //           int _res=push_event(ag);
+    //           if(_res<0) return(_res);
+    //         }
+    //       }
+    //       else
+    //       {//past TH, set the local time to TH as the next step will be agent end;
+    //         (*ag).tte=input.global_parameters.time_horizon+(*ag).local_time_at_AZT-calendar_time-(*ag).local_time;
+    //         (*ag).local_time=(*ag).local_time+(*ag).tte;
+    //       }
+    //     }//while (within AZT agent)
+    //   }
+
+//-------------------------------------------------------------ENF of SAFA --------------------------------
 
     event_end_process(ag);
     (*ag).event=event_end;
