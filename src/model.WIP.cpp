@@ -1000,7 +1000,7 @@ struct agent
   double _pred_fev1;
 
   double local_time_at_AZT; //Safa
-  bool AZT_flag; //Safa
+  int AZT_flag; //Safa
 
   double ln_exac_rate_intercept;   //backround rate of exacerbation (intercept only);
   double logit_exac_severity_intercept;   //backround severity of exacerbation (intercept only);
@@ -2057,7 +2057,7 @@ double update_prevalent_diagnosis(agent *ag)
 //--------------------------- AZITHROMYCIN - Safa------------------------------------------
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
-  if((*ag).diagnosis==1 && (*ag).AZT_flag == false && (
+  if((*ag).diagnosis==1 && (*ag).AZT_flag == 0 && (
      ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1))
     )
   {
@@ -2065,7 +2065,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
     if (rand_unif() < input.medication.medication_adherence)
     {
       (*ag).medication_status= max((*ag).medication_status | MED_CLASS_MACRO, (*ag).medication_status);
-      (*ag).AZT_flag = true;
+      (*ag).AZT_flag = 1;
       (*ag).local_time_at_AZT = (*ag).local_time;
       medication_LPT(ag);
     }
@@ -2094,7 +2094,7 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 (*ag).followup_time = 0; //resetting the value for new agent
 (*ag).local_time_at_COPD = 0; //resetting the value for new agent
 
-(*ag).AZT_flag = false; //Safa
+(*ag).AZT_flag = 0; //Safa
 (*ag).local_time_at_AZT = 0; //Safa
 
 (*ag).cough = 0;
