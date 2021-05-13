@@ -6,3 +6,4 @@
 *.md
 *.Rmd
 *.tiff
+.DS_Store
