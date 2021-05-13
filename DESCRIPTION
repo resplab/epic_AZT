@@ -37,6 +37,6 @@ Imports:
     jsonlite,
     rredis
 LinkingTo: Rcpp, RcppArmadillo
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0
 Suggests:
     testthat

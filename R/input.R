@@ -513,6 +513,7 @@ init_input <- function() {
                                             ICS_LAMA_LABA_SABA=log((1-0.34)^input$medication$medication_adherence),
 
                                             #Safa's update:
+                                            AZT=log((1-0.31)^input$medication$medication_adherence),
                                             SABA_AZT=log((1-0.31)^input$medication$medication_adherence),
                                             LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
                                             SABA_LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
@@ -527,7 +528,7 @@ init_input <- function() {
                                             ICS_LAMA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
                                             ICS_LAMA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
                                             ICS_LAMA_LABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
-                                            ICS_LAMA_LABA_SABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
+                                            ICS_LAMA_LABA_SABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence)
                                             )
 
 
