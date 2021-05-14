@@ -482,11 +482,6 @@ init_input <- function() {
   input_ref$diagnosis$logit_p_overdiagnosis_by_sex <- "Kate's regression on CanCOLD, provided on 2019-07-16"
   input$diagnosis$p_correct_overdiagnosis <- 0.9
 
-  #random diagnosis variable #safa
-  input_help$diagnosis$xxe <- "Proportion adherent to medication"
-  input$diagnosus$xx <- 1
-  input_ref$diagnosis$xx <- ""
-
   ## Medication;
 
   # adherence to medication
@@ -512,7 +507,7 @@ init_input <- function() {
                                             ICS_LAMA_LABA=log((1-0.34)^input$medication$medication_adherence),
                                             ICS_LAMA_LABA_SABA=log((1-0.34)^input$medication$medication_adherence),
 
-                                            #Safa's update:
+                                            #Safa :
                                             AZT=log((1-0.31)^input$medication$medication_adherence),
                                             SABA_AZT=log((1-0.31)^input$medication$medication_adherence),
                                             LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
@@ -541,7 +536,8 @@ init_input <- function() {
                                         LAMA_LABA=876.76*input$medication$medication_adherence, LAMA_LABA_SABA=0,
                                         ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0, ICS_LAMA_SABA=0,
                                         ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0,
-                                        #Safa's update:
+                                        #Safa :
+                                        AZT=0,
                                         SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
                                         LAMA_AZT=0, LAMA_SABA_AZT=0,
                                         LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
@@ -554,7 +550,8 @@ init_input <- function() {
   input$medication$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
                                         LAMA_LABA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
                                         ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0,
-                                        #Safa's update:
+                                        #Safa :
+                                        AZT=0,
                                         SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
                                         LAMA_AZT=0, LAMA_SABA_AZT=0, LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
                                         ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,

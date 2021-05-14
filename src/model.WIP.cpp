@@ -623,9 +623,9 @@ struct input
 
   struct
   {
-    double medication_ln_hr_exac[16];
-    double medication_costs[16];
-    double medication_utility[16];
+    double medication_ln_hr_exac[32];
+    double medication_costs[32];
+    double medication_utility[32];
     double medication_adherence;
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
@@ -1510,7 +1510,7 @@ struct output_ex
 
 #if (OUTPUT_EX & OUTPUT_EX_MEDICATION) > 0
   double medication_time_by_class[N_MED_CLASS];
-  double n_exac_by_medication_class[N_MED_CLASS][3];
+  double n_exac_by_medication_class[N_MED_CLASS][4]; //update  from 3 to 4 by Safa!!
 #endif
 
 } output_ex;
@@ -2061,14 +2061,15 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
      ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1))
     )
   {
-    // message("INSIDE AZT function=%f\n",1.1);
-    if (rand_unif() < input.medication.medication_adherence)
-    {
-      (*ag).medication_status= max((*ag).medication_status | MED_CLASS_MACRO, (*ag).medication_status);
-      (*ag).AZT_flag = 1;
-      (*ag).local_time_at_AZT = (*ag).local_time;
-      medication_LPT(ag);
-    }
+
+    (*ag).medication_status= max(  16, (*ag).medication_status);
+    // printf("%d\n", ((*ag).medication_status));
+
+
+    // (*ag).AZT_flag = 1;
+    // (*ag).local_time_at_AZT = (*ag).local_time;
+    // medication_LPT(ag);
+
   }
 
   return(0);
@@ -3042,10 +3043,12 @@ void event_exacerbation_process(agent *ag)
   if((*ag).medication_status>0)
   {
     for(int i=0;i<N_MED_CLASS;i++)
+
       if(((*ag).medication_status >> i) & 1)
       {
         output_ex.n_exac_by_medication_class[i][(*ag).exac_status-1]+=1;
       }
+
   }
 #endif
 
