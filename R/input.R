@@ -560,13 +560,7 @@ init_input <- function() {
   input_help$medication$medication_utility <- "Utility addition from treatment"
   input$medication$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
                                         LAMA_LABA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
-                                        ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0,
-                                        #Safa :
-                                        AZT=0,
-                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
-                                        LAMA_AZT=0, LAMA_SABA_AZT=0, LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
-                                        ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
-                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
+                                        ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0)
   input_ref$medication$medication_utility <- "Lambe et al. Thorax 2019"
 
   # medication event - disabled

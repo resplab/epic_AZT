@@ -626,9 +626,9 @@ struct input
 
   struct
   {
-    double medication_ln_hr_exac[32];
-    double medication_costs[32];
-    double medication_utility[32];
+    double medication_ln_hr_exac[2^N_MED_CLASS];
+    double medication_costs[2^N_MED_CLASS];
+    double medication_utility[2^(N_MED_CLASS-1)]; // Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
     double medication_adherence;
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
@@ -2072,13 +2072,12 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
     )
   {
 
-    (*ag).medication_status= max(  16, (*ag).medication_status);
+    (*ag).medication_status= max( (*ag).medication_status | MED_CLASS_MACRO , (*ag).medication_status);
     // printf("%d\n", ((*ag).medication_status));
 
-
-    // (*ag).AZT_flag = 1;
-    // (*ag).local_time_at_AZT = (*ag).local_time;
-    // medication_LPT(ag);
+    (*ag).AZT_flag = 1;
+    (*ag).local_time_at_AZT = (*ag).local_time;
+    medication_LPT(ag);
 
   }
 
@@ -2721,8 +2720,8 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 NumericMatrix Cget_all_events_matrix()
 {
 
-  NumericMatrix outm(event_stack_pointer,33);
-  CharacterVector eventMatrixColNames(33);
+  NumericMatrix outm(event_stack_pointer,32);
+  CharacterVector eventMatrixColNames(32);
 
 
 // eventMatrixColNames = CharacterVector::create("id", "local_time","sex", "time_at_creation", "age_at_creation", "pack_years","gold","event","FEV1","FEV1_slope", "FEV1_slope_t","pred_FEV1","smoking_status", "localtime_at_COPD", "age_at_COPD", "weight_at_COPD", "height","followup_after_COPD", "FEV1_baseline");
@@ -2754,13 +2753,12 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(23) = "dyspnea";
   eventMatrixColNames(24) = "gpvisits";
   eventMatrixColNames(25) = "diagnosis";
-  eventMatrixColNames(26) = "time_at_diagnosis";
-  eventMatrixColNames(27) = "medication_status";
-  eventMatrixColNames(28) = "case_detection";
-  eventMatrixColNames(29) = "cumul_cost";
-  eventMatrixColNames(30) = "cumul_qaly";
-  eventMatrixColNames(31) = "local_time_at_AZT";
-  eventMatrixColNames(32) = "AZT_flag";
+  eventMatrixColNames(26) = "medication_status";
+  eventMatrixColNames(27) = "case_detection";
+  eventMatrixColNames(28) = "cumul_cost";
+  eventMatrixColNames(29) = "cumul_qaly";
+  eventMatrixColNames(30) = "local_time_at_AZT";
+  eventMatrixColNames(31) = "AZT_flag";
 
 
   colnames(outm) = eventMatrixColNames;
@@ -2793,13 +2791,12 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,23)=(*ag).dyspnea;
     outm(i,24)=(*ag).gpvisits;
     outm(i,25)=(*ag).diagnosis;
-    outm(i,26)=(*ag).time_at_diagnosis;
-    outm(i,27)=(*ag).medication_status;
-    outm(i,28)=(*ag).case_detection;
-    outm(i,29)=(*ag).cumul_cost;
-    outm(i,30)=(*ag).cumul_qaly;
-    outm(i,31)=(*ag).local_time_at_AZT;
-    outm(i,32)=(*ag).AZT_flag;
+    outm(i,26)=(*ag).medication_status;
+    outm(i,27)=(*ag).case_detection;
+    outm(i,28)=(*ag).cumul_cost;
+    outm(i,29)=(*ag).cumul_qaly;
+    outm(i,30)=(*ag).local_time_at_AZT;
+    outm(i,31)=(*ag).AZT_flag;
   }
   return(outm);
 }
