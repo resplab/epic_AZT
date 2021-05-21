@@ -540,29 +540,6 @@ init_input <- function() {
 
   input_ref$medication$medication_ln_hr_exac <- "LAMA-Zhou et al. 2017, LAMA/LABA-UPLIFT 2008, ICS/LAMA/LABA-KRONOS 2018"
 
-  # cost of medications
-  input_help$medication$medication_costs <- "Costs of treatment"
-  input$medication$medication_costs <-c(None=0,SABA=72.15*input$medication$medication_adherence, LABA=0, SABA_LABA=0,
-                                        LAMA=479.35*input$medication$medication_adherence, LAMA_SABA=0,
-                                        LAMA_LABA=876.76*input$medication$medication_adherence, LAMA_LABA_SABA=0,
-                                        ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0, ICS_LAMA_SABA=0,
-                                        ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0,
-                                        #Safa :
-                                        AZT=0,
-                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
-                                        LAMA_AZT=0, LAMA_SABA_AZT=0,
-                                        LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
-                                        ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
-                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
-  input_ref$medication$medication_costs <- "BC administrative data"
-
-  # utility from medications
-  input_help$medication$medication_utility <- "Utility addition from treatment"
-  input$medication$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
-                                        LAMA_LABA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
-                                        ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0)
-  input_ref$medication$medication_utility <- "Lambe et al. Thorax 2019"
-
   # medication event - disabled
   template = c(int = 0, sex = 0, age = 0, med_class = rep(0, length(medication_classes)))
   mx <- NULL
@@ -619,6 +596,29 @@ init_input <- function() {
 
   input$cost$cost_outpatient_diagnosis <- 98.89
   input_help$cost$cost_outpatient_diagnosis <- "Cost of diagnostic spirometry"
+
+  # cost of medications
+  input_help$cost$medication_costs <- "Costs of treatment"
+  input$cost$medication_costs <-c(None=0,SABA=72.15*input$medication$medication_adherence, LABA=0, SABA_LABA=0,
+                                        LAMA=479.35*input$medication$medication_adherence, LAMA_SABA=0,
+                                        LAMA_LABA=876.76*input$medication$medication_adherence, LAMA_LABA_SABA=0,
+                                        ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0, ICS_LAMA_SABA=0,
+                                        ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0,
+                                        #Safa :
+                                        AZT=0,
+                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
+                                        LAMA_AZT=0, LAMA_SABA_AZT=0,
+                                        LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
+                                        ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
+                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
+  input_ref$cost$medication_costs <- "BC administrative data"
+
+  # utility from medications
+  input_help$utility$medication_utility <- "Utility addition from treatment"
+  input$utility$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
+                                          LAMA_LABA_SABA=0, ICS=0, ICS_SABA=0, ICS_LABA=0, ICS_LABA_SABA=0, ICS_LAMA=0,
+                                          ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0)
+  input_ref$utility$medication_utility <- "Lambe et al. Thorax 2019"
 
   #input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
 

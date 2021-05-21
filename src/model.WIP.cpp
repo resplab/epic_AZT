@@ -594,6 +594,7 @@ struct input
     double exac_dcost[4];
     double cost_case_detection;
     double cost_outpatient_diagnosis;
+    double medication_costs[2^N_MED_CLASS]; //Safa
 
     double doctor_visit_by_type[2];
     double mi_dcost;
@@ -606,6 +607,7 @@ struct input
   {
     double bg_util_by_stage[5];
     double exac_dutil[4][4];
+    double medication_utility[2^(N_MED_CLASS-1)]; //Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
 
     double mi_dutil;
     double mi_post_dutil;
@@ -627,8 +629,8 @@ struct input
   struct
   {
     double medication_ln_hr_exac[2^N_MED_CLASS];
-    double medication_costs[2^N_MED_CLASS];
-    double medication_utility[2^(N_MED_CLASS-1)]; // Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
+    // double medication_costs[2^N_MED_CLASS];
+    // double medication_utility[2^(N_MED_CLASS-1)]; // Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
     double medication_adherence;
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
@@ -2072,16 +2074,32 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
     )
   {
 
-    (*ag).medication_status= max( (*ag).medication_status | MED_CLASS_MACRO , (*ag).medication_status);
-    // printf("%d\n", ((*ag).medication_status));
+    (*ag).medication_status= (MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA | MED_CLASS_MACRO);
 
     (*ag).AZT_flag = 1;
     (*ag).local_time_at_AZT = (*ag).local_time;
+    // hearing:
+//     if((*ag).hearing_loss == 0) {
+// //
+//     }
     medication_LPT(ag);
+
 
   }
 
   return(0);
+}
+
+double update_AZT_adverse_events(agent *ag) {
+  if ((*ag).hearing_status == 0 && p< B0+(B1*(RR^AZT).age){
+    if (rand_unif() < input.medication.medication_adherence)
+
+
+    } => {hearing = 1, age_at_hearing = current_age}
+                              else if (hearing == 1 && ceil(age_at_hearing) - ceil(current_age) == 1 ) # (how long later the agent uses the hearing_aid?) { hearing = 2 # hearing with hearing_aid}
+
+                              if p < p(GIS) => GIS +=1
+
 }
 //--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
 
@@ -3530,6 +3548,7 @@ agent *event_fixed_process(agent *ag)
   update_gpvisits(ag);
   update_diagnosis(ag);
   update_AZT(ag); // Safa: criteria_met => AZT_flag = TRUE + years in study monitored + update everything else
+  update_AZT_adverse_events(ag);
 
 
   lung_function_LPT(ag);
