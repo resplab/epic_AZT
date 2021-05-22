@@ -607,7 +607,7 @@ struct input
   {
     double bg_util_by_stage[5];
     double exac_dutil[4][4];
-    double medication_utility[2^(N_MED_CLASS-1)]; //Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
+    double medication_utility[2^N_MED_CLASS]; //Safa
 
     double mi_dutil;
     double mi_post_dutil;
@@ -630,7 +630,7 @@ struct input
   {
     double medication_ln_hr_exac[2^N_MED_CLASS];
     // double medication_costs[2^N_MED_CLASS];
-    // double medication_utility[2^(N_MED_CLASS-1)]; // Safa: because AZT, unlike other medications, improves utility only through reduction of exacerbation
+    // double medication_utility[2^(N_MED_CLASS-1)];
     double medication_adherence;
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
@@ -788,18 +788,21 @@ List Cget_inputs()
       Rcpp::Named("exac_dcost")=AS_VECTOR_DOUBLE(input.cost.exac_dcost),
       Rcpp::Named("cost_case_detection")=input.cost.cost_case_detection,
       Rcpp::Named("cost_outpatient_diagnosis")=input.cost.cost_outpatient_diagnosis,
+      Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.cost.medication_costs),
+
 
       Rcpp::Named("doctor_visit_by_type")=AS_VECTOR_DOUBLE(input.cost.doctor_visit_by_type)
     ),
     Rcpp::Named("utility")=Rcpp::List::create(
       Rcpp::Named("bg_util_by_stage")=AS_VECTOR_DOUBLE(input.utility.bg_util_by_stage),
-      Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil)
+      Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil),
+      Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility),
     )
   ,
   Rcpp::Named("medication")=Rcpp::List::create(
     Rcpp::Named("medication_ln_hr_exac")=AS_VECTOR_DOUBLE(input.medication.medication_ln_hr_exac),
-    Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.medication.medication_costs),
-    Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.medication.medication_utility),
+    // Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.medication.medication_costs),
+    // Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.medication.medication_utility),
     Rcpp::Named("medication_adherence")=input.medication.medication_adherence,
     Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
     Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
@@ -918,8 +921,8 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="cost$cost_outpatient_diagnosis") {input.cost.cost_outpatient_diagnosis=value[0]; return(0);};
 
   if(name=="medication$medication_ln_hr_exac") READ_R_VECTOR(value,input.medication.medication_ln_hr_exac);
-  if(name=="medication$medication_costs") READ_R_VECTOR(value,input.medication.medication_costs);
-  if(name=="medication$medication_utility") READ_R_VECTOR(value,input.medication.medication_utility);
+  // if(name=="medication$medication_costs") READ_R_VECTOR(value,input.medication.medication_costs);
+  // if(name=="medication$medication_utility") READ_R_VECTOR(value,input.medication.medication_utility);
   if(name=="medication$medication_adherence") {input.medication.medication_adherence=value[0]; return(0);};
   if(name=="medication$ln_h_start_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_start_betas_by_class);
   if(name=="medication$ln_h_stop_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_stop_betas_by_class);
@@ -928,9 +931,13 @@ int Cset_input_var(std::string name, NumericVector value)
 
   if(name=="cost$exac_dcost") READ_R_VECTOR(value,input.cost.exac_dcost);
   if(name=="cost$doctor_visit_by_type") READ_R_VECTOR(value,input.cost.doctor_visit_by_type);
+  if(name=="cost$medication_costs") READ_R_VECTOR(value,input.cost.medication_costs);
+
 
   if(name=="utility$bg_util_by_stage") READ_R_VECTOR(value,input.utility.bg_util_by_stage);
   if(name=="utility$exac_dutil") READ_R_MATRIX(value,input.utility.exac_dutil);
+  if(name=="utility$medication_utility") READ_R_VECTOR(value,input.utility.medication_utility);
+
 
   if(name=="comorbidity$logit_p_mi_betas_by_sex") READ_R_MATRIX(value,input.comorbidity.logit_p_mi_betas_by_sex);
   if(name=="comorbidity$ln_h_mi_betas_by_sex") READ_R_MATRIX(value,input.comorbidity.ln_h_mi_betas_by_sex);
@@ -1807,12 +1814,12 @@ void medication_LPT(agent *ag)
   #endif
     // costs
     //(*ag).cumul_cost+=1;
-          (*ag).cumul_cost+=input.medication.medication_costs[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+        (*ag).cumul_cost+=input.cost.medication_costs[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
 
     // qaly
       if((*ag).gold>0 && (*ag).diagnosis>0 && (((*ag).cough==1) || ((*ag).phlegm==1) || ((*ag).wheeze==1) || ((*ag).dyspnea==1)))
         {
-          (*ag).cumul_qaly+=input.medication.medication_utility[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+          (*ag).cumul_qaly+=input.utility.medication_utility[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
         }
 
     (*ag).medication_LPT=(*ag).local_time;
@@ -2074,7 +2081,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
     )
   {
 
-    (*ag).medication_status= (MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA | MED_CLASS_MACRO);
+    (*ag).medication_status = (MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA | MED_CLASS_MACRO);
 
     (*ag).AZT_flag = 1;
     (*ag).local_time_at_AZT = (*ag).local_time;
