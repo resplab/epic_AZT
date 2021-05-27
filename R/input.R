@@ -549,6 +549,31 @@ init_input <- function() {
   input$medication$ln_h_stop_betas_by_class <- mx
   input$medication$ln_rr_exac_by_class <- rep(log(1), length(medication_classes))  #TODO: update this to represent different medication effect
 
+  ## Adverse Events - for Azithromycin  #Safa
+
+  input_help$adv_event$hearing_loss_incidence <- "hearing loss incidence rate"
+  input$adv_event$hearing_loss_incidence <- 0.023
+  input_ref$adv_event$hearing_loss_incidence <- "Lin et al."
+
+  input_help$adv_event$hearing_loss_rr <- "Relative-risk of hearing-loss due to azithromycin"
+  input$adv_event$hearing_loss_rr <- 1.168
+  input_ref$adv_event$hearing_loss_rr <- "Li et al."
+
+  input_help$adv_event$gastro_prevalence <- "Gastrointestinal prevalence in one week "
+  input$adv_event$gastro_prevalence <- 0.33
+  input_ref$adv_event$gastro_prevalence <- "Almario et al."
+
+  input_help$adv_event$gastro_rr <- "Relative-risk of gastrointestinal symptoms due to azithromycin"
+  input$adv_event$gastro_rr <- 1.187
+  input_ref$adv_event$gastro_rr <- "Li et al."
+
+  input_help$adv_event$cvd_rr <- "Relative-risk of mortality due to cardiovascular disease in the first 5 days of using AZT "
+  input$adv_event$cvd_rr <- 2.88
+  input_ref$adv_event$cvd_rr <- "Ray et al."
+
+  input_help$adv_event$resistance <- "Resistance parameter in {{RR}_0}^{exp(-k*(year-1))}"
+  input$adv_event$resistance <- 0.22
+  input_ref$adv_event$resistance <- "based on Pomares et al."
 
   ### comorbidity mi - not implemented
   input$comorbidity$logit_p_mi_betas_by_sex = cbind(male = c(intercept = -3000, age = 0.001, age2 = 0, pack_years = 0.01, smoking = 0.001,
