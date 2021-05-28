@@ -654,6 +654,16 @@ struct input
 
   struct
   {
+    double hearing_loss_incidence;
+    double hearing_loss_rr;
+    double gastro_prevalence;
+    double gastro_rr;
+    double cvd_rr;
+    double resistance;
+  } adv_event;
+
+  struct
+  {
   } project_specific;
 
 
@@ -796,7 +806,7 @@ List Cget_inputs()
     Rcpp::Named("utility")=Rcpp::List::create(
       Rcpp::Named("bg_util_by_stage")=AS_VECTOR_DOUBLE(input.utility.bg_util_by_stage),
       Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil),
-      Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility),
+      Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility)
     )
   ,
   Rcpp::Named("medication")=Rcpp::List::create(
@@ -807,6 +817,16 @@ List Cget_inputs()
     Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
     Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
     Rcpp::Named("ln_rr_exac_by_class")=AS_VECTOR_DOUBLE(input.medication.ln_rr_exac_by_class)
+  )
+  ,
+  //Safa:
+  Rcpp::Named("adv_event")=Rcpp::List::create(
+    Rcpp::Named("hearing_loss_incidence")=input.adv_event.hearing_loss_incidence,
+    Rcpp::Named("hearing_loss_rr")=input.adv_event.hearing_loss_rr,
+    Rcpp::Named("gastro_prevalence")=input.adv_event.gastro_prevalence,
+    Rcpp::Named("gastro_rr")=input.adv_event.gastro_rr,
+    Rcpp::Named("cvd_rr")=input.adv_event.cvd_rr,
+    Rcpp::Named("resistance")=input.adv_event.resistance
   )
   ,
   Rcpp::Named("project_specific")=Rcpp::List::create(
@@ -948,6 +968,14 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="comorbidity$logit_p_hf_betas_by_sex") READ_R_MATRIX(value,input.comorbidity.logit_p_hf_betas_by_sex);
   if(name=="comorbidity$ln_h_hf_betas_by_sex") READ_R_MATRIX(value,input.comorbidity.ln_h_hf_betas_by_sex);
 
+  //Safa:
+  if(name=="adv_event$hearing_loss_incidence") {input.adv_event.hearing_loss_incidence=value[0]; return(0);};
+  if(name=="adv_event$hearing_loss_rr") {input.adv_event.hearing_loss_rr=value[0]; return(0);};
+  if(name=="adv_event$gastro_prevalence") {input.adv_event.gastro_prevalence=value[0]; return(0);};
+  if(name=="adv_event$gastro_rr") {input.adv_event.gastro_rr=value[0]; return(0);};
+  if(name=="adv_event$cvd_rr") {input.adv_event.cvd_rr=value[0]; return(0);};
+  if(name=="adv_event$resistance") {input.adv_event.resistance=value[0]; return(0);};
+
   //Define your project-specific inputs here;
 
   return(ERR_INCORRECT_INPUT_VAR);
@@ -1015,9 +1043,6 @@ struct agent
   int local_time_at_COPD;
   double _pred_fev1;
 
-  double local_time_at_AZT; //Safa
-  int AZT_flag; //Safa
-
   double ln_exac_rate_intercept;   //backround rate of exacerbation (intercept only);
   double logit_exac_severity_intercept;   //backround severity of exacerbation (intercept only);
 
@@ -1029,9 +1054,6 @@ struct agent
 
   double exac_history_time_first, exac_history_time_second;
   int exac_history_severity_first, exac_history_severity_second;
-
-  double notmild_exac_history_time_first, notmild_exac_history_time_second; //Safa
-  int notmild_exac_history_severity_first, notmild_exac_history_severity_second;  //Safa
 
   double symptom_score;
 
@@ -1080,6 +1102,16 @@ struct agent
   double re_phlegm;
   double re_dyspnea;
   double re_wheeze;
+
+  //Safa:
+  double local_time_at_AZT; //Safa
+  int AZT_flag; //Safa
+
+  int hearing_status; //Safa
+  int gastro_status; //Safa
+
+  double notmild_exac_history_time_first, notmild_exac_history_time_second; //Safa
+  int notmild_exac_history_severity_first, notmild_exac_history_severity_second;  //Safa
 
   //Define your project-specific variables here;
 
@@ -1160,6 +1192,10 @@ List get_agent(agent *ag)
 
   out["local_time_at_AZT"]=(*ag).local_time_at_AZT; //Safa
   out["AZT_flag"]=(*ag).AZT_flag; //Safa
+
+  out["hearing_status"]=(*ag).hearing_status; //Safa
+  out["gastro_status"]=(*ag).gastro_status; //Safa
+
 
   out["tte"] = (*ag).tte;
   out["event"] = (*ag).event;
@@ -2085,12 +2121,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 
     (*ag).AZT_flag = 1;
     (*ag).local_time_at_AZT = (*ag).local_time;
-    // hearing:
-//     if((*ag).hearing_loss == 0) {
-// //
-//     }
     medication_LPT(ag);
-
 
   }
 
@@ -2098,8 +2129,8 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 }
 
 double update_AZT_adverse_events(agent *ag) {
-  if ((*ag).hearing_status == 0 && p< B0+(B1*(RR^AZT).age){
-    if (rand_unif() < input.medication.medication_adherence)
+  if ((*ag).hearing_status == 0){
+    if (rand_unif() < input.adve)
 
 
     } => {hearing = 1, age_at_hearing = current_age}
@@ -2108,7 +2139,7 @@ double update_AZT_adverse_events(agent *ag) {
                               if p < p(GIS) => GIS +=1
 
 }
-//--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
+--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
 
 
 
@@ -2131,6 +2162,9 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 
 (*ag).AZT_flag = 0; //Safa
 (*ag).local_time_at_AZT = 0; //Safa
+
+(*ag).hearing_status = 0; //Safa
+(*ag).gastro_status = 0; //Safa
 
 (*ag).cough = 0;
 (*ag).phlegm  = 0;
@@ -2745,8 +2779,8 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 NumericMatrix Cget_all_events_matrix()
 {
 
-  NumericMatrix outm(event_stack_pointer,32);
-  CharacterVector eventMatrixColNames(32);
+  NumericMatrix outm(event_stack_pointer,34);
+  CharacterVector eventMatrixColNames(34);
 
 
 // eventMatrixColNames = CharacterVector::create("id", "local_time","sex", "time_at_creation", "age_at_creation", "pack_years","gold","event","FEV1","FEV1_slope", "FEV1_slope_t","pred_FEV1","smoking_status", "localtime_at_COPD", "age_at_COPD", "weight_at_COPD", "height","followup_after_COPD", "FEV1_baseline");
@@ -2782,8 +2816,10 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(27) = "case_detection";
   eventMatrixColNames(28) = "cumul_cost";
   eventMatrixColNames(29) = "cumul_qaly";
-  eventMatrixColNames(30) = "local_time_at_AZT";
-  eventMatrixColNames(31) = "AZT_flag";
+  eventMatrixColNames(30) = "local_time_at_AZT"; //Safa
+  eventMatrixColNames(31) = "AZT_flag"; //Safa
+  eventMatrixColNames(32) = "hearing_status"; //Safa
+  eventMatrixColNames(33) = "gastro_status"; //Safa
 
 
   colnames(outm) = eventMatrixColNames;
@@ -2820,8 +2856,11 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,27)=(*ag).case_detection;
     outm(i,28)=(*ag).cumul_cost;
     outm(i,29)=(*ag).cumul_qaly;
+    //Safa
     outm(i,30)=(*ag).local_time_at_AZT;
     outm(i,31)=(*ag).AZT_flag;
+    outm(i,32)=(*ag).hearing_status;
+    outm(i,33)=(*ag).gastro_status;
   }
   return(outm);
 }
