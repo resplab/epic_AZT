@@ -30,6 +30,9 @@ Layout:
 #define OUTPUT_EX_MEDICATION 256
 #define OUTPUT_EX_POPULATION 512
 
+#define OUTPUT_AZT_CEA 1024 //Safa _ outputs of cost effectiveness analysis of AZT
+
+
 #define OUTPUT_EX 65535
 
 
@@ -830,7 +833,7 @@ List Cget_inputs()
   )
   ,
   Rcpp::Named("project_specific")=Rcpp::List::create(
-    //Put your project-specific outputs here;
+    //Put your project-specific inputs here;
   )
   );
 
@@ -1103,15 +1106,23 @@ struct agent
   double re_dyspnea;
   double re_wheeze;
 
-  //Safa:
-  double local_time_at_AZT; //Safa
-  int AZT_flag; //Safa
+#ifdef OUTPUT_AZT_CEA
 
-  int hearing_status; //Safa
-  int gastro_status; //Safa
+  double local_time_at_AZT;
+  int azt_eligible ;
 
-  double notmild_exac_history_time_first, notmild_exac_history_time_second; //Safa
-  int notmild_exac_history_severity_first, notmild_exac_history_severity_second;  //Safa
+  int hearing_status;
+  int gastro_status;
+  double time_at_hearing_loss;
+
+  double notmild_exac_history_time_first, notmild_exac_history_time_second;
+  int notmild_exac_history_severity_first, notmild_exac_history_severity_second;
+
+  double cost_pre_azt;
+  double qaly_pre_azt;
+
+#endif
+
 
   //Define your project-specific variables here;
 
@@ -1190,13 +1201,6 @@ List get_agent(agent *ag)
   out["gold"] = (*ag).gold;
   out["local_time_at_COPD"]=(*ag).local_time_at_COPD;
 
-  out["local_time_at_AZT"]=(*ag).local_time_at_AZT; //Safa
-  out["AZT_flag"]=(*ag).AZT_flag; //Safa
-
-  out["hearing_status"]=(*ag).hearing_status; //Safa
-  out["gastro_status"]=(*ag).gastro_status; //Safa
-
-
   out["tte"] = (*ag).tte;
   out["event"] = (*ag).event;
   out["symptom_score"] = (*ag).symptom_score;
@@ -1226,6 +1230,25 @@ List get_agent(agent *ag)
 
   out["cumul_cost"] = (*ag).cumul_cost;
   out["cumul_qaly"] = (*ag).cumul_qaly;
+
+#ifdef OUTPUT_AZT_CEA
+
+  out["local_time_at_AZT"]=(*ag).local_time_at_AZT;
+  out["azt_eligible "]=(*ag).azt_eligible ;
+
+  out["hearing_status"]=(*ag).hearing_status;
+  out["gastro_status"]=(*ag).gastro_status;
+  out["time_at_hearing_loss"]=(*ag).time_at_hearing_loss;
+
+  out["notmild_exac_history_time_first"]=(*ag).notmild_exac_history_time_first;
+  out["notmild_exac_history_time_second"]=(*ag).notmild_exac_history_time_second;
+  out["notmild_exac_history_severity_first"]=(*ag).notmild_exac_history_severity_first;
+  out["notmild_exac_history_severity_second"]=(*ag).notmild_exac_history_severity_second;
+
+  out["cost_pre_azt"]=(*ag).cost_pre_azt;
+  out["qaly_pre_azt"]=(*ag).qaly_pre_azt;
+
+#endif
 
   return out;
 }
@@ -1424,6 +1447,14 @@ struct output
   double total_cost;    //END because agent records
   double total_qaly;  //END because agent records
   double total_diagnosed_time;
+
+#ifdef OUTPUT_AZT_CEA //Safa
+  double azt_total_cost;
+  double azt_total_qaly;
+  // add other AZT-outputs here
+
+#endif
+
 } output;
 
 
@@ -1442,6 +1473,13 @@ void reset_output()
   output.total_cost=0;
   output.total_qaly=0;
   output.total_diagnosed_time=0;
+
+#ifdef OUTPUT_AZT_CEA //Safa
+  double azt_total_cost=0;
+  double azt_total_qaly=0;
+  // add other AZT-outputs here
+#endif
+
 }
 
 //' Main outputs of the current run.
@@ -1463,6 +1501,12 @@ List Cget_output()
     Rcpp::Named("total_qaly")=output.total_qaly,
     Rcpp::Named("total_diagnosed_time")=output.total_diagnosed_time
   //Define your project-specific output here;
+
+#ifdef OUTPUT_AZT_CEA //Safa
+    ,Rcpp::Named("azt_total_cost")=output.azt_total_cost,
+    Rcpp::Named("azt_total_qaly")=output.azt_total_qaly
+     // add other AZT-outputs here
+#endif
   );
 }
 
@@ -2112,16 +2156,20 @@ double update_prevalent_diagnosis(agent *ag)
 //--------------------------- AZITHROMYCIN - Safa------------------------------------------
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
-  if((*ag).diagnosis==1 && (*ag).AZT_flag == 0 && (
-     ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1))
+// maybe I should remove (*ag).azt_eligible  == 0
+  if((*ag).diagnosis==1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
+     // ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1) &&
+      ((*ag).medication_status > 13) &&  ((*ag).medication_status < 16)//)
     )
   {
-
-    (*ag).medication_status = (MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA | MED_CLASS_MACRO);
-
-    (*ag).AZT_flag = 1;
+    if (rand_unif() < input.medication.medication_adherence)
+    {
+      (*ag).medication_status = ((*ag).medication_status | MED_CLASS_MACRO);
+    }
+    (*ag).azt_eligible  = 1;
     (*ag).local_time_at_AZT = (*ag).local_time;
-    medication_LPT(ag);
+    (*ag).cost_pre_azt = (*ag).cumul_cost;
+    (*ag).qaly_pre_azt = (*ag).cumul_qaly;
 
   }
 
@@ -2129,17 +2177,30 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 }
 
 double update_AZT_adverse_events(agent *ag) {
+  double on_azt = (1 & ((*ag).medication_status >> (MED_CLASS_MACRO - 1)));
+
   if ((*ag).hearing_status == 0){
-    if (rand_unif() < input.adve)
+    if (rand_unif() < input.adv_event.hearing_loss_incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
+      (*ag).hearing_status = 1;
+      (*ag).time_at_hearing_loss = (*ag).local_time;
+    }
+  }
+  else{
+    if((*ag).hearing_status == 1){
+      // && floor(((*ag).time_at_hearing_loss) - ((*ag).local_time)) == 1 : we don't need it because annual event is called each year. If hearing == 1 it means it has been last year => hearing = 2 , unless we set 2/3 for hearing_aid use
+      // if( rand_unif() < input.adv_event.hearing_aid_access){
+          (*ag).hearing_status = 2;
+      // }
+    }
+  }
 
+  if(rand_unif() < input.adv_event.gastro_prevalence*(pow(input.adv_event.gastro_rr, on_azt))){
+    (*ag).gastro_status = 1; //if GI == True => assume he suffers from GI the whole year?
+  }
 
-    } => {hearing = 1, age_at_hearing = current_age}
-                              else if (hearing == 1 && ceil(age_at_hearing) - ceil(current_age) == 1 ) # (how long later the agent uses the hearing_aid?) { hearing = 2 # hearing with hearing_aid}
-
-                              if p < p(GIS) => GIS +=1
-
+  return(0);
 }
---------------------------- End of AZITHROMYCIN - Safa-------------------------------------
+//--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
 
 
 
@@ -2159,12 +2220,6 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 (*ag).weight_baseline = 0; //resetting the value for new agent
 (*ag).followup_time = 0; //resetting the value for new agent
 (*ag).local_time_at_COPD = 0; //resetting the value for new agent
-
-(*ag).AZT_flag = 0; //Safa
-(*ag).local_time_at_AZT = 0; //Safa
-
-(*ag).hearing_status = 0; //Safa
-(*ag).gastro_status = 0; //Safa
 
 (*ag).cough = 0;
 (*ag).phlegm  = 0;
@@ -2297,9 +2352,6 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
 
   (*ag).exac_history_time_first=0;
   (*ag).exac_history_time_second=0;
-
-  (*ag).notmild_exac_history_time_first=0; //Safa
-  (*ag).notmild_exac_history_time_second=-0; //Safa
 
   //COPD;
   double COPD_odds=exp(input.COPD.logit_p_COPD_betas_by_sex[0][(*ag).sex]
@@ -2474,6 +2526,25 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
 
   (*ag).payoffs_LPT=0;
 
+
+
+#ifdef OUTPUT_AZT_CEA
+
+  (*ag).azt_eligible  = 0; //Safa
+  (*ag).local_time_at_AZT = 0; //Safa
+  (*ag).hearing_status = 0; //Safa
+  (*ag).gastro_status = 0; //Safa
+  (*ag).time_at_hearing_loss = 0; //Safa
+  (*ag).notmild_exac_history_time_first=0; //Safa
+  (*ag).notmild_exac_history_time_second=0; //Safa
+  (*ag).notmild_exac_history_severity_first=0;
+  (*ag).notmild_exac_history_severity_second=0;
+
+  (*ag).cost_pre_azt = 0;
+  (*ag).qaly_pre_azt= 0;
+
+#endif
+
   return(ag);
 }
 
@@ -2598,7 +2669,10 @@ agent *event_end_process(agent *ag)
   output.total_qaly+=(*ag).cumul_qaly;
   if((*ag).diagnosis>0 && (*ag).gold>0) output.total_diagnosed_time+=(*ag).local_time-(*ag).time_at_diagnosis;
 
-
+#ifdef OUTPUT_AZT_CEA
+  output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(*ag).azt_eligible;
+  output.azt_total_qaly += ((*ag).cumul_qaly = (*ag).qaly_pre_azt)*(*ag).azt_eligible;
+#endif
 
 #ifdef OUTPUT_EX
   //NO!!! We do not update many of output_ex stuff here. It might fall within the same calendar year of the last fixed event and results in double counting.
@@ -2779,8 +2853,13 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 NumericMatrix Cget_all_events_matrix()
 {
 
-  NumericMatrix outm(event_stack_pointer,34);
-  CharacterVector eventMatrixColNames(34);
+  int size = 30;
+#ifdef OUTPUT_AZT_CEA
+  int size = 37;
+#endif
+
+  NumericMatrix outm(event_stack_pointer,size);
+  CharacterVector eventMatrixColNames(size);
 
 
 // eventMatrixColNames = CharacterVector::create("id", "local_time","sex", "time_at_creation", "age_at_creation", "pack_years","gold","event","FEV1","FEV1_slope", "FEV1_slope_t","pred_FEV1","smoking_status", "localtime_at_COPD", "age_at_COPD", "weight_at_COPD", "height","followup_after_COPD", "FEV1_baseline");
@@ -2816,11 +2895,16 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(27) = "case_detection";
   eventMatrixColNames(28) = "cumul_cost";
   eventMatrixColNames(29) = "cumul_qaly";
-  eventMatrixColNames(30) = "local_time_at_AZT"; //Safa
-  eventMatrixColNames(31) = "AZT_flag"; //Safa
-  eventMatrixColNames(32) = "hearing_status"; //Safa
-  eventMatrixColNames(33) = "gastro_status"; //Safa
 
+#ifdef OUTPUT_AZT_CEA
+  eventMatrixColNames(30) = "local_time_at_AZT";
+  eventMatrixColNames(31) = "azt_eligible ";
+  eventMatrixColNames(32) = "hearing_status";
+  eventMatrixColNames(33) = "gastro_status";
+  eventMatrixColNames(34) = "time_at_hearing_loss";
+  eventMatrixColNames(35) = "cost_pre_azt";
+  eventMatrixColNames(36) = "qaly_pre_azt";
+#endif
 
   colnames(outm) = eventMatrixColNames;
   for(int i=0;i<event_stack_pointer;i++)
@@ -2856,11 +2940,17 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,27)=(*ag).case_detection;
     outm(i,28)=(*ag).cumul_cost;
     outm(i,29)=(*ag).cumul_qaly;
-    //Safa
+
+#ifdef OUTPUT_AZT_CEA
     outm(i,30)=(*ag).local_time_at_AZT;
-    outm(i,31)=(*ag).AZT_flag;
+    outm(i,31)=(*ag).azt_eligible ;
     outm(i,32)=(*ag).hearing_status;
     outm(i,33)=(*ag).gastro_status;
+    outm(i,34)=(*ag).time_at_hearing_loss;
+    outm(i,35)=(*ag).cost_pre_azt;
+    outm(i,36)=(*ag).qaly_pre_azt;
+#endif
+
   }
   return(outm);
 }
@@ -3449,7 +3539,7 @@ double event_bgd_tte(agent *ag)
 
   double _or=exp(
     input.agent.ln_h_bgd_betas[0]
-  +input.agent.ln_h_bgd_betas[1]*time
+    +input.agent.ln_h_bgd_betas[1]*time
     +input.agent.ln_h_bgd_betas[2]*time*time
     +input.agent.ln_h_bgd_betas[3]*age
     +input.agent.ln_h_bgd_betas[4]*((*ag).n_mi>0)
@@ -3523,7 +3613,7 @@ void event_bgd_process(agent *ag)
 //////////////////////////////////////////////////////////////////EVENT_DOCTOR_VISIT////////////////////////////////////;
 double event_doctor_visit_tte(agent *ag)
 {
-  return(HUGE_VALL); //Currently deisabled;
+  return(HUGE_VALL); //Currently disabled ;
   double rate=input.outpatient.rate_doctor_visit;
 
   double tte=rand_exp()/rate;
@@ -3593,16 +3683,16 @@ agent *event_fixed_process(agent *ag)
   update_symptoms(ag); //updating in the annual event
   update_gpvisits(ag);
   update_diagnosis(ag);
-  update_AZT(ag); // Safa: criteria_met => AZT_flag = TRUE + years in study monitored + update everything else
-  update_AZT_adverse_events(ag);
-
 
   lung_function_LPT(ag);
   exacerbation_LPT(ag);
   payoffs_LPT(ag);
   medication_LPT(ag);
 
-
+#ifdef OUTPUT_AZT_CEA
+  update_AZT(ag); // Safa: criteria_met => azt_eligible  = TRUE + years in study monitored + update everything else
+  update_AZT_adverse_events(ag);
+#endif
 
 #ifdef OUTPUT_EX
   update_output_ex(ag);
@@ -3854,7 +3944,7 @@ int Cmodel(int max_n_agents)
       }
 
       temp=event_smoking_change_tte(ag);
-   //   if(temp<tte && (*ag).gold==0)  //for debug porpuses, no smoking change when COPD is present
+   //   if(temp<tte && (*ag).gold==0)  //for debug purposes, no smoking change when COPD is present
       if(temp<tte)
       {
         tte=temp;
@@ -4006,7 +4096,7 @@ int Cmodel(int max_n_agents)
 
     //----------------------------Safa: Continue to follow patients who received AZT --------------------
 
-    // if((*ag).AZT_flag){
+    // if((*ag).azt_eligible ){
     //
     //
     //

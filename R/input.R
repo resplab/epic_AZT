@@ -575,6 +575,10 @@ init_input <- function() {
   input$adv_event$resistance <- 0.22
   input_ref$adv_event$resistance <- "based on Pomares et al."
 
+  # input_help$adv_event$hearing_aid_adherence <- "hearing_aid_adherence"
+  # input$adv_event$hearing_aid_adherence <- 1
+  # input_ref$adv_event$hearing_aid_adherence <- ""
+
   ### comorbidity mi - not implemented
   input$comorbidity$logit_p_mi_betas_by_sex = cbind(male = c(intercept = -3000, age = 0.001, age2 = 0, pack_years = 0.01, smoking = 0.001,
                                                              calendar_time = 0, bmi = 0, gold = 0.05), female = c(intercept = -3000, age = 0.001, age2 = 0, pack_years = 0.01, smoking = 0.001,
@@ -651,6 +655,12 @@ init_input <- function() {
                                          ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
                                          ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$utility$medication_utility <- "Lambe et al. Thorax 2019"
+
+  #Safa:
+  # input$utility$hearing_dutil
+  # input$utility$gis_dutil
+  # input$utility$hearing_aid_utility
+
 
   #input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
 
