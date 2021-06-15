@@ -611,7 +611,8 @@ struct input
     double bg_util_by_stage[5];
     double exac_dutil[4][4];
     double medication_utility[2^N_MED_CLASS]; //Safa
-
+    double hearing_dutil[3];//Safa
+    double gis_dutil;//Safa
     double mi_dutil;
     double mi_post_dutil;
     double stroke_dutil;
@@ -809,7 +810,10 @@ List Cget_inputs()
     Rcpp::Named("utility")=Rcpp::List::create(
       Rcpp::Named("bg_util_by_stage")=AS_VECTOR_DOUBLE(input.utility.bg_util_by_stage),
       Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil),
-      Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility)
+      Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility),
+      Rcpp::Named("hearing_dutil")=AS_VECTOR_DOUBLE(input.utility.hearing_dutil),
+      Rcpp::Named("gis_dutil")=input.utility.gis_dutil
+
     )
   ,
   Rcpp::Named("medication")=Rcpp::List::create(
@@ -960,6 +964,8 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="utility$bg_util_by_stage") READ_R_VECTOR(value,input.utility.bg_util_by_stage);
   if(name=="utility$exac_dutil") READ_R_MATRIX(value,input.utility.exac_dutil);
   if(name=="utility$medication_utility") READ_R_VECTOR(value,input.utility.medication_utility);
+  if(name=="utility$hearing_dutil") READ_R_VECTOR(value,input.utility.hearing_dutil);
+  if(name=="utility$gis_dutil") {input.utility.gis_dutil=value[0]; return(0);};
 
 
   if(name=="comorbidity$logit_p_mi_betas_by_sex") READ_R_MATRIX(value,input.comorbidity.logit_p_mi_betas_by_sex);
@@ -1106,7 +1112,7 @@ struct agent
   double re_dyspnea;
   double re_wheeze;
 
-#ifdef OUTPUT_AZT_CEA
+// #ifdef OUTPUT_AZT_CEA
 
   double local_time_at_AZT;
   int azt_eligible ;
@@ -1121,7 +1127,7 @@ struct agent
   double cost_pre_azt;
   double qaly_pre_azt;
 
-#endif
+// #endif
 
 
   //Define your project-specific variables here;
@@ -1231,7 +1237,7 @@ List get_agent(agent *ag)
   out["cumul_cost"] = (*ag).cumul_cost;
   out["cumul_qaly"] = (*ag).cumul_qaly;
 
-#ifdef OUTPUT_AZT_CEA
+// #ifdef OUTPUT_AZT_CEA
 
   out["local_time_at_AZT"]=(*ag).local_time_at_AZT;
   out["azt_eligible "]=(*ag).azt_eligible ;
@@ -1248,7 +1254,7 @@ List get_agent(agent *ag)
   out["cost_pre_azt"]=(*ag).cost_pre_azt;
   out["qaly_pre_azt"]=(*ag).qaly_pre_azt;
 
-#endif
+// #endif
 
   return out;
 }
@@ -1448,12 +1454,12 @@ struct output
   double total_qaly;  //END because agent records
   double total_diagnosed_time;
 
-#ifdef OUTPUT_AZT_CEA //Safa
+// #ifdef OUTPUT_AZT_CEA //Safa
   double azt_total_cost;
   double azt_total_qaly;
   // add other AZT-outputs here
 
-#endif
+// #endif
 
 } output;
 
@@ -1474,11 +1480,11 @@ void reset_output()
   output.total_qaly=0;
   output.total_diagnosed_time=0;
 
-#ifdef OUTPUT_AZT_CEA //Safa
+// #ifdef OUTPUT_AZT_CEA //Safa
   double azt_total_cost=0;
   double azt_total_qaly=0;
   // add other AZT-outputs here
-#endif
+// #endif
 
 }
 
@@ -1502,11 +1508,11 @@ List Cget_output()
     Rcpp::Named("total_diagnosed_time")=output.total_diagnosed_time
   //Define your project-specific output here;
 
-#ifdef OUTPUT_AZT_CEA //Safa
+// #ifdef OUTPUT_AZT_CEA //Safa
     ,Rcpp::Named("azt_total_cost")=output.azt_total_cost,
     Rcpp::Named("azt_total_qaly")=output.azt_total_qaly
      // add other AZT-outputs here
-#endif
+// #endif
   );
 }
 
@@ -2154,6 +2160,16 @@ double update_prevalent_diagnosis(agent *ag)
 }
 
 //--------------------------- AZITHROMYCIN - Safa------------------------------------------
+double update_AZT_payoffs (agent *ag){
+
+  if((*ag).azt_eligible){
+    (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+  }
+
+  return (0);
+}
+
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
 // maybe I should remove (*ag).azt_eligible  == 0
@@ -2179,27 +2195,36 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 double update_AZT_adverse_events(agent *ag) {
   double on_azt = (1 & ((*ag).medication_status >> (MED_CLASS_MACRO - 1)));
 
-  if ((*ag).hearing_status == 0){
-    if (rand_unif() < input.adv_event.hearing_loss_incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
-      (*ag).hearing_status = 1;
-      (*ag).time_at_hearing_loss = (*ag).local_time;
+  if((*ag).azt_eligible){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
+    if ((*ag).hearing_status == 0){
+      if (rand_unif() < input.adv_event.hearing_loss_incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
+        (*ag).hearing_status = 1;
+        (*ag).time_at_hearing_loss = (*ag).local_time;
+        if(on_azt){ // we stop AZT for anyone with hearing loss
+          (*ag).medication_status = ((*ag).medication_status & ~MED_CLASS_MACRO);
+        }
+      }
     }
-  }
-  else{
-    if((*ag).hearing_status == 1){
-      // && floor(((*ag).time_at_hearing_loss) - ((*ag).local_time)) == 1 : we don't need it because annual event is called each year. If hearing == 1 it means it has been last year => hearing = 2 , unless we set 2/3 for hearing_aid use
-      // if( rand_unif() < input.adv_event.hearing_aid_access){
-          (*ag).hearing_status = 2;
-      // }
+    else{
+      if((*ag).hearing_status == 1){
+        // && floor(((*ag).time_at_hearing_loss) - ((*ag).local_time)) == 1 : we don't need it because annual event is called each year. If hearing == 1 it means it has been last year => hearing = 2 , unless we set 2/3 for hearing_aid use
+        // if( rand_unif() < input.adv_event.hearing_aid_access){
+        (*ag).hearing_status = 2;
+        // }
+      }
     }
-  }
 
-  if(rand_unif() < input.adv_event.gastro_prevalence*(pow(input.adv_event.gastro_rr, on_azt))){
-    (*ag).gastro_status = 1; //if GI == True => assume he suffers from GI the whole year?
+
+    if(rand_unif() < input.adv_event.gastro_prevalence*(pow(input.adv_event.gastro_rr, on_azt))){
+      (*ag).gastro_status = 1; //if GI == True => assume he suffers from GI the whole year?
+    }
+
   }
 
   return(0);
 }
+
+
 //--------------------------- End of AZITHROMYCIN - Safa-------------------------------------
 
 
@@ -2528,7 +2553,7 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
 
 
 
-#ifdef OUTPUT_AZT_CEA
+// #ifdef OUTPUT_AZT_CEA
 
   (*ag).azt_eligible  = 0; //Safa
   (*ag).local_time_at_AZT = 0; //Safa
@@ -2543,7 +2568,7 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
   (*ag).cost_pre_azt = 0;
   (*ag).qaly_pre_azt= 0;
 
-#endif
+// #endif
 
   return(ag);
 }
@@ -2643,6 +2668,14 @@ agent *event_end_process(agent *ag)
 
   }
 
+// #ifdef OUTPUT_AZT_CEA
+  if((*ag).azt_eligible){ //pay attention to the warning mentioned for OUPT_eX later in the function
+    double remained_period = ((*ag).local_time - floor((*ag).local_time));
+    (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*remained_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*remained_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+  }
+// #endif
+
   ++output.n_agents;
   output.n_COPD+=((*ag).gold>0)*1;
   output.cumul_time+=(*ag).local_time;
@@ -2669,10 +2702,10 @@ agent *event_end_process(agent *ag)
   output.total_qaly+=(*ag).cumul_qaly;
   if((*ag).diagnosis>0 && (*ag).gold>0) output.total_diagnosed_time+=(*ag).local_time-(*ag).time_at_diagnosis;
 
-#ifdef OUTPUT_AZT_CEA
-  output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(*ag).azt_eligible;
-  output.azt_total_qaly += ((*ag).cumul_qaly = (*ag).qaly_pre_azt)*(*ag).azt_eligible;
-#endif
+// #ifdef OUTPUT_AZT_CEA
+  output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(*ag).azt_eligible*(1+pow(input.global_parameters.discount_cost,(*ag).local_time_at_AZT));
+  output.azt_total_qaly += ((*ag).cumul_qaly = (*ag).qaly_pre_azt)*(*ag).azt_eligible*(1+pow(input.global_parameters.discount_cost,(*ag).local_time_at_AZT));
+// #endif
 
 #ifdef OUTPUT_EX
   //NO!!! We do not update many of output_ex stuff here. It might fall within the same calendar year of the last fixed event and results in double counting.
@@ -2853,10 +2886,10 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 NumericMatrix Cget_all_events_matrix()
 {
 
-  int size = 30;
-#ifdef OUTPUT_AZT_CEA
   int size = 37;
-#endif
+// #ifdef OUTPUT_AZT_CEA
+//   int size = 37;
+// #endif
 
   NumericMatrix outm(event_stack_pointer,size);
   CharacterVector eventMatrixColNames(size);
@@ -2896,7 +2929,7 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(28) = "cumul_cost";
   eventMatrixColNames(29) = "cumul_qaly";
 
-#ifdef OUTPUT_AZT_CEA
+// #ifdef OUTPUT_AZT_CEA
   eventMatrixColNames(30) = "local_time_at_AZT";
   eventMatrixColNames(31) = "azt_eligible ";
   eventMatrixColNames(32) = "hearing_status";
@@ -2904,7 +2937,7 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(34) = "time_at_hearing_loss";
   eventMatrixColNames(35) = "cost_pre_azt";
   eventMatrixColNames(36) = "qaly_pre_azt";
-#endif
+// #endif
 
   colnames(outm) = eventMatrixColNames;
   for(int i=0;i<event_stack_pointer;i++)
@@ -2941,7 +2974,7 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,28)=(*ag).cumul_cost;
     outm(i,29)=(*ag).cumul_qaly;
 
-#ifdef OUTPUT_AZT_CEA
+// #ifdef OUTPUT_AZT_CEA
     outm(i,30)=(*ag).local_time_at_AZT;
     outm(i,31)=(*ag).azt_eligible ;
     outm(i,32)=(*ag).hearing_status;
@@ -2949,7 +2982,7 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,34)=(*ag).time_at_hearing_loss;
     outm(i,35)=(*ag).cost_pre_azt;
     outm(i,36)=(*ag).qaly_pre_azt;
-#endif
+// #endif
 
   }
   return(outm);
@@ -3690,8 +3723,9 @@ agent *event_fixed_process(agent *ag)
   medication_LPT(ag);
 
 #ifdef OUTPUT_AZT_CEA
-  update_AZT(ag); // Safa: criteria_met => azt_eligible  = TRUE + years in study monitored + update everything else
+  update_AZT_payoffs(ag);
   update_AZT_adverse_events(ag);
+  update_AZT(ag); // Safa: criteria_met => azt_eligible  = TRUE + years in study monitored + update everything else
 #endif
 
 #ifdef OUTPUT_EX
@@ -3923,9 +3957,13 @@ int Cmodel(int max_n_agents)
     }
 
 
-    while((calendar_time+(*ag).local_time<input.global_parameters.time_horizon) && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
+    while(((calendar_time+(*ag).local_time<input.global_parameters.time_horizon) | ((*ag).azt_eligible && (calendar_time+(*ag).local_time<input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
+            && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
     {
       double tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
+      if((*ag).azt_eligible){
+        tte += (*ag).local_time_at_AZT;
+      }
       int winner=-1;
       double temp;
 
@@ -4015,7 +4053,8 @@ int Cmodel(int max_n_agents)
       }
 
 
-      if(calendar_time+(*ag).local_time+tte<input.global_parameters.time_horizon)
+      if((calendar_time+(*ag).local_time+tte<input.global_parameters.time_horizon) |
+         ((*ag).azt_eligible && calendar_time+(*ag).local_time+tte<input.global_parameters.time_horizon+(*ag).local_time_at_AZT))
       {
         (*ag).tte=tte;
         (*ag).local_time=(*ag).local_time+tte;

@@ -626,7 +626,10 @@ init_input <- function() {
   input$cost$cost_outpatient_diagnosis <- 98.89
   input_help$cost$cost_outpatient_diagnosis <- "Cost of diagnostic spirometry"
 
-  # cost of medications
+  # Costs of adverse events of AZT (Safa)
+
+
+  # cost of medications (Safa)
   input_help$cost$medication_costs <- "Costs of treatment"
   input$cost$medication_costs <-c(None=0,SABA=72.15*input$medication$medication_adherence, LABA=0, SABA_LABA=0,
                                         LAMA=479.35*input$medication$medication_adherence, LAMA_SABA=0,
@@ -642,6 +645,15 @@ init_input <- function() {
                                         ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$cost$medication_costs <- "BC administrative data"
 
+  # disutility of adverse events of AZT (Safa)
+  input_help$utility$hearing_dutil <- "disutility of hearing loss"
+  input$utility$hearing_dutil <- c(0, -0.187, -0.127)
+  input_ref$utility$hearing_dutil <- "NICE and Barton et al."
+
+  input_help$utility$gis_dutil <- "disutility of GI symptosm"
+  input$utility$gis_dutil <- -0.0261
+  input_ref$utility$gis_dutil <- "Sullivan et al."
+
   # utility from medications
   input_help$utility$medication_utility <- "Utility addition from treatment"
   input$utility$medication_utility <-c(None=0,SABA=0.0367,LABA=0,SABA_LABA=0, LAMA=0.0367, LAMA_SABA=0, LAMA_LABA=0.0367,
@@ -655,11 +667,6 @@ init_input <- function() {
                                          ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
                                          ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$utility$medication_utility <- "Lambe et al. Thorax 2019"
-
-  #Safa:
-  # input$utility$hearing_dutil
-  # input$utility$gis_dutil
-  # input$utility$hearing_aid_utility
 
 
   #input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
