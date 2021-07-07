@@ -811,8 +811,8 @@ List Cget_inputs()
       Rcpp::Named("bg_util_by_stage")=AS_VECTOR_DOUBLE(input.utility.bg_util_by_stage),
       Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil),
       Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.utility.medication_utility),
-      Rcpp::Named("hearing_dutil")=AS_VECTOR_DOUBLE(input.utility.hearing_dutil),
-      Rcpp::Named("gis_dutil")=input.utility.gis_dutil
+      Rcpp::Named("hearing_dutil")=AS_VECTOR_DOUBLE(input.utility.hearing_dutil), //Safa
+      Rcpp::Named("gis_dutil")=input.utility.gis_dutil //Safa
 
     )
   ,
@@ -2165,8 +2165,12 @@ double update_AZT_payoffs (agent *ag){
   if((*ag).azt_eligible){
     (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
     (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
-  }
 
+    // (*ag).cumul_cost+=input.cost.hearing_cost[(*ag).hearing_status];
+    // (*ag).cumul_cost+=(*ag).gastro_status*input.cost.gis_cost;
+
+
+  }
   return (0);
 }
 
@@ -2175,7 +2179,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 // maybe I should remove (*ag).azt_eligible  == 0
   if((*ag).diagnosis==1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
      // ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1) &&
-      ((*ag).medication_status > 13) &&  ((*ag).medication_status < 16)//)
+      (((*ag).medication_status & 15) >= 14 )
     )
   {
     if (rand_unif() < input.medication.medication_adherence)
@@ -2193,7 +2197,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 }
 
 double update_AZT_adverse_events(agent *ag) {
-  double on_azt = (1 & ((*ag).medication_status >> (N_MED_CLASS - 1)));
+  double on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
 
   if((*ag).azt_eligible){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
     if ((*ag).hearing_status == 0){
@@ -2706,8 +2710,8 @@ agent *event_end_process(agent *ag)
   if((*ag).diagnosis>0 && (*ag).gold>0) output.total_diagnosed_time+=(*ag).local_time-(*ag).time_at_diagnosis;
 
 // #ifdef OUTPUT_AZT_CEA
-  output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(*ag).azt_eligible*(1+pow(input.global_parameters.discount_cost,(*ag).local_time_at_AZT));
-  output.azt_total_qaly += ((*ag).cumul_qaly = (*ag).qaly_pre_azt)*(*ag).azt_eligible*(1+pow(input.global_parameters.discount_cost,(*ag).local_time_at_AZT));
+  output.azt_total_cost += (*ag).azt_eligible*((*ag).cumul_cost - (*ag).cost_pre_azt)*(pow(1+input.global_parameters.discount_cost,(*ag).local_time_at_AZT+calendar_time));
+  output.azt_total_qaly += (*ag).azt_eligible*((*ag).cumul_qaly - (*ag).qaly_pre_azt)*(pow(1+input.global_parameters.discount_qaly,(*ag).local_time_at_AZT+calendar_time));
 // #endif
 
 #ifdef OUTPUT_EX
@@ -3363,8 +3367,8 @@ double event_exacerbation_end_tte(agent *ag)
 
 void event_exacerbation_end_process(agent *ag)
 {
-  (*ag).cumul_cost+=input.cost.exac_dcost[(*ag).exac_status-1]/(1+pow(input.global_parameters.discount_cost,(*ag).time_at_creation+(*ag).local_time));
-  (*ag).cumul_qaly+=input.utility.exac_dutil[(*ag).exac_status-1][(*ag).gold-1]/(1+pow(input.global_parameters.discount_qaly,(*ag).time_at_creation+(*ag).local_time));
+  (*ag).cumul_cost+=input.cost.exac_dcost[(*ag).exac_status-1]/(pow(1+input.global_parameters.discount_cost,(*ag).time_at_creation+(*ag).local_time));
+  (*ag).cumul_qaly+=input.utility.exac_dutil[(*ag).exac_status-1][(*ag).gold-1]/(pow(1+input.global_parameters.discount_qaly,(*ag).time_at_creation+(*ag).local_time));
 
   (*ag).exac_status=0;
 }
@@ -3591,12 +3595,13 @@ double event_bgd_tte(agent *ag)
     double odds=p/(1-p)*_or;
     p=odds/(1+odds);
 
-#ifdef OUTPUT_AZT_CEA
-    if((*ag).azt_eligible && (*ag).local_time-(*ag).local_time_at_AZT < 5/365){
-      p*= ((360+5*input.adv_event.cvd_rr)/365);
-      if (p > 1) {p = 1;}
-    }
-#endif
+// #ifdef OUTPUT_AZT_CEA
+//     double on_azt =
+//     if((*ag).azt_eligible && (*ag).local_time-(*ag).local_time_at_AZT < 5/365){
+//       p*= ((360+5*input.adv_event.cvd_rr)/365);
+//       if (p > 1) {p = 1;}
+//     }
+// #endif
 
     //adjusting background mortality for current smokers
     if ((*ag).smoking_status > 1e-5) {
