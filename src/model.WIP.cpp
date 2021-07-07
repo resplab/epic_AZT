@@ -30,7 +30,7 @@ Layout:
 #define OUTPUT_EX_MEDICATION 256
 #define OUTPUT_EX_POPULATION 512
 
-#define OUTPUT_AZT_CEA 1024 //Safa _ outputs of cost effectiveness analysis of AZT
+// #define OUTPUT_AZT_CEA 0 //Safa _ outputs of cost effectiveness analysis of AZT
 
 
 #define OUTPUT_EX 65535
@@ -1886,6 +1886,9 @@ void payoffs_LPT(agent *ag)
   (*ag).cumul_qaly+=input.utility.bg_util_by_stage[(*ag).gold]*((*ag).local_time-(*ag).payoffs_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
 
   (*ag).payoffs_LPT=(*ag).local_time;
+  // if((*ag).gold > 2){
+  //   Rprintf("In payoff_LPT=%f\n",(*ag).cumul_qaly);
+  // }
 }
 
 
@@ -2177,6 +2180,9 @@ double update_AZT_payoffs (agent *ag){
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
 // maybe I should remove (*ag).azt_eligible  == 0
+  Rprintf("Am I here? %f\n",1);
+
+// (*ag).gold > 2
   if((*ag).diagnosis==1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
      // ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1) &&
       (((*ag).medication_status & 15) >= 14 )
