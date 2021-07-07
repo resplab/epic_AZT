@@ -2938,7 +2938,7 @@ NumericMatrix Cget_all_events_matrix()
 
 // #ifdef OUTPUT_AZT_CEA
   eventMatrixColNames(30) = "local_time_at_AZT";
-  eventMatrixColNames(31) = "azt_eligible ";
+  eventMatrixColNames(31) = "azt_eligible";
   eventMatrixColNames(32) = "hearing_status";
   eventMatrixColNames(33) = "gastro_status";
   eventMatrixColNames(34) = "time_at_hearing_loss";
