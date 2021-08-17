@@ -490,7 +490,6 @@ struct input
   struct
   {
     double p_female;
-
     double height_0_betas[5]; //intercept, sex, age, age2, sex*age;
     double height_0_sd;
     double weight_0_betas[7]; //intercept, sex, age, age2, sex*age, height, year;
@@ -803,10 +802,9 @@ List Cget_inputs()
       Rcpp::Named("cost_case_detection")=input.cost.cost_case_detection,
       Rcpp::Named("cost_outpatient_diagnosis")=input.cost.cost_outpatient_diagnosis,
       Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.cost.medication_costs),
-
-
       Rcpp::Named("doctor_visit_by_type")=AS_VECTOR_DOUBLE(input.cost.doctor_visit_by_type)
     ),
+
     Rcpp::Named("utility")=Rcpp::List::create(
       Rcpp::Named("bg_util_by_stage")=AS_VECTOR_DOUBLE(input.utility.bg_util_by_stage),
       Rcpp::Named("exac_dutil")=AS_MATRIX_DOUBLE(input.utility.exac_dutil),
@@ -814,18 +812,16 @@ List Cget_inputs()
       Rcpp::Named("hearing_dutil")=AS_VECTOR_DOUBLE(input.utility.hearing_dutil), //Safa
       Rcpp::Named("gis_dutil")=input.utility.gis_dutil //Safa
 
-    )
-  ,
-  Rcpp::Named("medication")=Rcpp::List::create(
-    Rcpp::Named("medication_ln_hr_exac")=AS_VECTOR_DOUBLE(input.medication.medication_ln_hr_exac),
-    // Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.medication.medication_costs),
-    // Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.medication.medication_utility),
-    Rcpp::Named("medication_adherence")=input.medication.medication_adherence,
-    Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
-    Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
-    Rcpp::Named("ln_rr_exac_by_class")=AS_VECTOR_DOUBLE(input.medication.ln_rr_exac_by_class)
-  )
-  ,
+    ),
+    Rcpp::Named("medication")=Rcpp::List::create(
+      Rcpp::Named("medication_ln_hr_exac")=AS_VECTOR_DOUBLE(input.medication.medication_ln_hr_exac),
+      // Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.medication.medication_costs),
+      // Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.medication.medication_utility),
+      Rcpp::Named("medication_adherence")=input.medication.medication_adherence,
+      Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
+      Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
+      Rcpp::Named("ln_rr_exac_by_class")=AS_VECTOR_DOUBLE(input.medication.ln_rr_exac_by_class)
+  ),
   //Safa:
   Rcpp::Named("adv_event")=Rcpp::List::create(
     Rcpp::Named("hearing_loss_incidence")=input.adv_event.hearing_loss_incidence,
@@ -955,7 +951,6 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="medication$ln_h_stop_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_stop_betas_by_class);
   if(name=="medication$ln_rr_exac_by_class") READ_R_VECTOR(value,input.medication.ln_rr_exac_by_class);
 
-
   if(name=="cost$exac_dcost") READ_R_VECTOR(value,input.cost.exac_dcost);
   if(name=="cost$doctor_visit_by_type") READ_R_VECTOR(value,input.cost.doctor_visit_by_type);
   if(name=="cost$medication_costs") READ_R_VECTOR(value,input.cost.medication_costs);
@@ -963,6 +958,7 @@ int Cset_input_var(std::string name, NumericVector value)
 
   if(name=="utility$bg_util_by_stage") READ_R_VECTOR(value,input.utility.bg_util_by_stage);
   if(name=="utility$exac_dutil") READ_R_MATRIX(value,input.utility.exac_dutil);
+
   if(name=="utility$medication_utility") READ_R_VECTOR(value,input.utility.medication_utility);
   if(name=="utility$hearing_dutil") READ_R_VECTOR(value,input.utility.hearing_dutil);
   if(name=="utility$gis_dutil") {input.utility.gis_dutil=value[0]; return(0);};
@@ -1882,13 +1878,16 @@ void exacerbation_LPT(agent *ag)
 
 void payoffs_LPT(agent *ag)
 {
+  // if((*ag).gold>0){
+  //   Rprintf("time = %f, qaly = %f\n", (*ag).local_time, (*ag).payoffs_LPT);
+  // }
   (*ag).cumul_cost+=input.cost.bg_cost_by_stage[(*ag).gold]*((*ag).local_time-(*ag).payoffs_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
   (*ag).cumul_qaly+=input.utility.bg_util_by_stage[(*ag).gold]*((*ag).local_time-(*ag).payoffs_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
-
+  if((*ag).gold>0){
+    Rprintf("insdie payoffs: medication = %f, cost_outpatient_diagnosis=%f, heaering = %f \n", input.medication.medication_adherence, input.cost.cost_outpatient_diagnosis, input.utility.hearing_dutil[1]);
+  }
   (*ag).payoffs_LPT=(*ag).local_time;
-  // if((*ag).gold > 2){
-  //   Rprintf("In payoff_LPT=%f\n",(*ag).cumul_qaly);
-  // }
+
 }
 
 
@@ -1904,11 +1903,11 @@ void medication_LPT(agent *ag)
     // costs
     //(*ag).cumul_cost+=1;
         (*ag).cumul_cost+=input.cost.medication_costs[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
-
     // qaly
       if((*ag).gold>0 && (*ag).diagnosis>0 && (((*ag).cough==1) || ((*ag).phlegm==1) || ((*ag).wheeze==1) || ((*ag).dyspnea==1)))
         {
           (*ag).cumul_qaly+=input.utility.medication_utility[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+
         }
 
     (*ag).medication_LPT=(*ag).local_time;
@@ -2180,7 +2179,7 @@ double update_AZT_payoffs (agent *ag){
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
 // maybe I should remove (*ag).azt_eligible  == 0
-  Rprintf("Am I here? %f\n",1);
+  // Rprintf("Am I here? %f\n",1);
 
 // (*ag).gold > 2
   if((*ag).diagnosis==1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
@@ -2279,6 +2278,12 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 
 (*ag).time_at_creation=calendar_time;
 (*ag).sex=rand_unif()<input.agent.p_female;
+Rprintf("alaki-1 is %f",input.cost.bg_cost_by_stage[3]);
+Rprintf("alaki-2 is %f",input.comorbidity.p_stroke_death);
+
+// Rprintf("alaki-2 is %f",input.medication.medication_ln_hr_exac[4]);
+
+
 (*ag).fev1_tail = sqrt(0.1845) * rand_norm() + 0.827;
 
 double r=rand_unif();
@@ -3728,6 +3733,7 @@ double event_fixed_tte(agent *ag)
 
 agent *event_fixed_process(agent *ag)
 {
+
   (*ag).weight+=input.agent.weight_0_betas[6];
   (*ag).weight_LPT=(*ag).local_time;
 

@@ -70,11 +70,10 @@ init_input <- function() {
   input_ref <- list()
 
 
+
   input$global_parameters <- list(age0 = 40, time_horizon = 20, discount_cost = 0.03, discount_qaly = 0.03)
   input_help$global_parameters <- list(age0 = "Starting age in the model", time_horizon = "Model time horizon", discount_cost = "Discount value for cost outcomes",
                                        discount_qaly = "Discount value for QALY outcomes")
-
-
 
   input_help$agent$p_female <- "Proportion of females in the population"
   input$agent$p_female <- 0.5
@@ -547,7 +546,7 @@ init_input <- function() {
 
   input$medication$ln_h_start_betas_by_class <- mx
   input$medication$ln_h_stop_betas_by_class <- mx
-  input$medication$ln_rr_exac_by_class <- rep(log(1), length(medication_classes))  #TODO: update this to represent different medication effect
+  input$medication$ln_rr_exac_by_class <- rep(log(1), length(medication_classes))  ##.TODO: update this to represent different medication effect
 
   ## Adverse Events - for Azithromycin  #Safa
 
@@ -593,26 +592,30 @@ init_input <- function() {
   input$comorbidity$logit_p_stroke_betas_by_sex=cbind(
     male=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, b_mi=0, gold=0.05, b_mi=0, n_mi=0),
     female=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05, b_mi=0, n_mi=0)
-  );
+  )
   input$comorbidity$ln_h_stroke_betas_by_sex=cbind(
     male=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05, b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0),
     female=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05, b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0)
-  );
-  input$comorbidity$p_stroke_death<-0.18;
+  )
+  input$comorbidity$p_stroke_death<-0.18
 
 
   #hf - not implemented
   input$comorbidity$logit_p_hf_betas_by_sex=cbind(
     male=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05, b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0),
     female=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05, b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0)
-  );
+  )
   input$comorbidity$ln_h_hf_betas_by_sex=cbind(
     male=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05,b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0),
     female=c(intercept=-3000, age=0.001, age2=0, pack_years=0.01, smoking=0.001, calendar_time=0, bmi=0.01, gold=0.05,b_mi=0, n_mi=0.01, b_stroke=0, n_stroke=0)
-  );
+  )
 
 
   ##cost and utility
+  input_help$cost$alaki <- "to test "
+  input$cost$alaki <- 0.5
+
+
   input$cost$bg_cost_by_stage=t(as.matrix(c(N=0, I=135, II=330, III=864, IV=1178)))
   input_help$cost$bg_cost_by_stage="Annual direct (NON-TREATMENT) maintenance costs for non-COPD and COPD by GOLD grades"
   #  input$cost$ind_bg_cost_by_stage=t(as.matrix(c(N=0, I=40, II=80, III=134, IV=134))) #TODO Not implemented in C yet.
@@ -669,7 +672,7 @@ init_input <- function() {
   input_ref$utility$medication_utility <- "Lambe et al. Thorax 2019"
 
 
-  #input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
+  # input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
 
   input$utility$bg_util_by_stage=t(as.matrix(c(N=0.86, I=0.81,II=0.72,III=0.68,IV=0.58)))
   input_help$utility$bg_util_by_stage="Background utilities for non-COPD, and COPD by GOLD grades"
