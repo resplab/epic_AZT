@@ -30,7 +30,7 @@ Layout:
 #define OUTPUT_EX_MEDICATION 256
 #define OUTPUT_EX_POPULATION 512
 
-// #define OUTPUT_AZT_CEA 0 //Safa _ outputs of cost effectiveness analysis of AZT
+#define OUTPUT_AZT_CEA 0 //Safa _ outputs of cost effectiveness analysis of AZT
 
 
 #define OUTPUT_EX 65535
@@ -596,7 +596,7 @@ struct input
     double exac_dcost[4];
     double cost_case_detection;
     double cost_outpatient_diagnosis;
-    double medication_costs[2^N_MED_CLASS]; //Safa
+    double medication_costs[32]; //Safa
 
     double doctor_visit_by_type[2];
     double mi_dcost;
@@ -609,7 +609,7 @@ struct input
   {
     double bg_util_by_stage[5];
     double exac_dutil[4][4];
-    double medication_utility[2^N_MED_CLASS]; //Safa
+    double medication_utility[32]; //Safa
     double hearing_dutil[3];//Safa
     double gis_dutil;//Safa
     double mi_dutil;
@@ -631,9 +631,7 @@ struct input
 
   struct
   {
-    double medication_ln_hr_exac[2^N_MED_CLASS];
-    // double medication_costs[2^N_MED_CLASS];
-    // double medication_utility[2^(N_MED_CLASS-1)];
+    double medication_ln_hr_exac[32];
     double medication_adherence;
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
@@ -814,9 +812,7 @@ List Cget_inputs()
 
     ),
     Rcpp::Named("medication")=Rcpp::List::create(
-      Rcpp::Named("medication_ln_hr_exac")=AS_VECTOR_DOUBLE(input.medication.medication_ln_hr_exac),
-      // Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.medication.medication_costs),
-      // Rcpp::Named("medication_utility")=AS_VECTOR_DOUBLE(input.medication.medication_utility),
+      Rcpp::Named("medication_ln_hr_exac")=AS_VECTOR_DOUBLE(input.medication.medication_ln_hr_exac),//Safa
       Rcpp::Named("medication_adherence")=input.medication.medication_adherence,
       Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
       Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
@@ -939,26 +935,21 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="outpatient$rate_doctor_visit") {input.outpatient.rate_doctor_visit=value[0]; return(0);}
   if(name=="outpatient$p_specialist") {input.outpatient.p_specialist=value[0]; return(0);}
 
-  if(name=="cost$bg_cost_by_stage") READ_R_VECTOR(value,input.cost.bg_cost_by_stage);
-  if(name=="cost$cost_case_detection") {input.cost.cost_case_detection=value[0]; return(0);};
-  if(name=="cost$cost_outpatient_diagnosis") {input.cost.cost_outpatient_diagnosis=value[0]; return(0);};
-
   if(name=="medication$medication_ln_hr_exac") READ_R_VECTOR(value,input.medication.medication_ln_hr_exac);
-  // if(name=="medication$medication_costs") READ_R_VECTOR(value,input.medication.medication_costs);
-  // if(name=="medication$medication_utility") READ_R_VECTOR(value,input.medication.medication_utility);
   if(name=="medication$medication_adherence") {input.medication.medication_adherence=value[0]; return(0);};
   if(name=="medication$ln_h_start_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_start_betas_by_class);
   if(name=="medication$ln_h_stop_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_stop_betas_by_class);
   if(name=="medication$ln_rr_exac_by_class") READ_R_VECTOR(value,input.medication.ln_rr_exac_by_class);
 
+  if(name=="cost$bg_cost_by_stage") READ_R_VECTOR(value,input.cost.bg_cost_by_stage);
+  if(name=="cost$cost_case_detection") {input.cost.cost_case_detection=value[0]; return(0);};
+  if(name=="cost$cost_outpatient_diagnosis") {input.cost.cost_outpatient_diagnosis=value[0]; return(0);};
   if(name=="cost$exac_dcost") READ_R_VECTOR(value,input.cost.exac_dcost);
   if(name=="cost$doctor_visit_by_type") READ_R_VECTOR(value,input.cost.doctor_visit_by_type);
   if(name=="cost$medication_costs") READ_R_VECTOR(value,input.cost.medication_costs);
 
-
   if(name=="utility$bg_util_by_stage") READ_R_VECTOR(value,input.utility.bg_util_by_stage);
   if(name=="utility$exac_dutil") READ_R_MATRIX(value,input.utility.exac_dutil);
-
   if(name=="utility$medication_utility") READ_R_VECTOR(value,input.utility.medication_utility);
   if(name=="utility$hearing_dutil") READ_R_VECTOR(value,input.utility.hearing_dutil);
   if(name=="utility$gis_dutil") {input.utility.gis_dutil=value[0]; return(0);};
@@ -988,10 +979,6 @@ int Cset_input_var(std::string name, NumericVector value)
 
 
 
-
-
-
-
 //' Returns a sample output for a given year and gender.
 //' @param year a number
 //' @param sex a number, 0 for male and 1 for female
@@ -1002,8 +989,6 @@ double get_sample_output(int year, int sex)
 {
   return input.agent.p_bgd_by_sex[year][(int)sex];
 }
-
-
 
 
 
@@ -1450,16 +1435,53 @@ struct output
   double total_qaly;  //END because agent records
   double total_diagnosed_time;
 
-// #ifdef OUTPUT_AZT_CEA //Safa
-  double azt_total_cost;
-  double azt_total_qaly;
-  // add other AZT-outputs here
+// #ifdef OUTPUT_AZT_CEA
+  int azt_n_agents;
+  int azt_n_men;
+  double azt_cumul_time;    //End variable by nature;
+  int azt_n_deaths;         //End variable by nature.
+  int azt_n_COPD;
+  double azt_avg_age;
+  double azt_avg_death_age;
 
+  int azt_total_exac[4];    //0:mild, 1:moderae, 2:severe; 3=very severe    END because agent records
+  int azt_total_gold[4];    //0:mild, 1:moderae, 2:severe; 3=very severe    END because agent records
+
+  double azt_total_cost;    //END because agent records
+  double azt_total_qaly;  //END because agent records
+
+  int azt_n_hearing;
+  int azt_n_GIs;
+
+  int azt_n_bg_death;
+  int azt_n_exac_death;
+
+  double azt_total_pack_years;
 // #endif
 
 } output;
 
 
+// #ifdef OUTPUT_AZT_CEA //Safa
+
+// struct AZT_output
+// {
+//   int n_agents;
+//   double cumul_time;    //End variable by nature;
+//   int n_deaths;         //End variable by nature.
+//   int n_COPD;
+//   double total_pack_years;    //END  because agent records
+//   int total_exac[4];    //0:mild, 1:moderae, 2:severe; 3=very severe    END because agent records
+//   double total_exac_time[4];  //END because agent records
+//
+//   int total_doctor_visit[2];  //0: GP, 1:SP
+//
+//   double total_cost;    //END because agent records
+//   double total_qaly;  //END because agent records
+//   double total_diagnosed_time;
+//
+// } AZT_output;
+// #endif
 
 
 void reset_output()
@@ -1476,10 +1498,29 @@ void reset_output()
   output.total_qaly=0;
   output.total_diagnosed_time=0;
 
-// #ifdef OUTPUT_AZT_CEA //Safa
-  double azt_total_cost=0;
-  double azt_total_qaly=0;
-  // add other AZT-outputs here
+// #ifdef OUTPUT_AZT_CEA
+  output.azt_n_agents=0;
+  output.azt_n_men=0;
+
+  output.azt_cumul_time=0;
+  output.azt_n_deaths=0;
+  output.azt_n_COPD=0;
+  output.azt_avg_age=0;
+  output.azt_avg_death_age=0;
+
+  output.azt_total_exac[0]=0;output.azt_total_exac[1]=0;output.azt_total_exac[2]=0;output.azt_total_exac[3]=0;
+  output.azt_total_gold[0]=0;output.azt_total_gold[1]=0;output.azt_total_gold[2]=0;output.azt_total_gold[3]=0;
+
+  output.azt_total_cost=0;
+  output.azt_total_qaly=0;
+
+  output.azt_n_hearing=0;
+  output.azt_n_GIs=0;
+
+  output.azt_n_bg_death=0;
+  output.azt_n_exac_death=0;
+
+  output.azt_total_pack_years=0;
 // #endif
 
 }
@@ -1496,26 +1537,42 @@ List Cget_output()
     Rcpp::Named("n_deaths")=output.n_deaths,
     Rcpp::Named("n_COPD")=output.n_COPD,
     Rcpp::Named("total_exac")=AS_VECTOR_INT(output.total_exac),
-    Rcpp::Named("total_exac_time")=AS_VECTOR_DOUBLE(output.total_exac_time),
-    Rcpp::Named("total_pack_years")=output.total_pack_years,
-    Rcpp::Named("total_doctor_visit")=AS_VECTOR_INT(output.total_doctor_visit),
-    Rcpp::Named("total_cost")=output.total_cost,
-    Rcpp::Named("total_qaly")=output.total_qaly,
-    Rcpp::Named("total_diagnosed_time")=output.total_diagnosed_time
+    // Rcpp::Named("total_exac_time")=AS_VECTOR_DOUBLE(output.total_exac_time),
+    // Rcpp::Named("total_pack_years")=output.total_pack_years,
+    // Rcpp::Named("total_doctor_visit")=AS_VECTOR_INT(output.total_doctor_visit),
+    // Rcpp::Named("total_cost")=output.total_cost,
+    // Rcpp::Named("total_qaly")=output.total_qaly,
+    // Rcpp::Named("total_diagnosed_time")=output.total_diagnosed_time
   //Define your project-specific output here;
 
 // #ifdef OUTPUT_AZT_CEA //Safa
-    ,Rcpp::Named("azt_total_cost")=output.azt_total_cost,
-    Rcpp::Named("azt_total_qaly")=output.azt_total_qaly
+    Rcpp::Named("azt_n_agents")=output.azt_n_agents,
+    Rcpp::Named("azt_n_men")=output.azt_n_men,
+
+      Rcpp::Named("azt_cumul_time")=output.azt_cumul_time,
+      Rcpp::Named("azt_n_deaths")=output.azt_n_deaths,
+      Rcpp::Named("azt_avg_age")=output.azt_avg_age,
+      Rcpp::Named("azt_avg_death_age")=output.azt_avg_death_age,
+
+      Rcpp::Named("azt_total_exac")=AS_VECTOR_INT(output.azt_total_exac),
+      Rcpp::Named("azt_total_gold")=AS_VECTOR_INT(output.azt_total_gold),
+
+      Rcpp::Named("azt_total_cost")=output.azt_total_cost,
+      Rcpp::Named("azt_total_qaly")=output.azt_total_qaly,
+
+      Rcpp::Named("azt_n_hearing")=output.azt_n_hearing,
+      Rcpp::Named("azt_n_GIs")=output.azt_n_GIs,
+
+      Rcpp::Named("azt_n_bg_death")=output.azt_n_bg_death,
+      Rcpp::Named("azt_n_exac_death")=output.azt_n_exac_death,
+
+      Rcpp::Named("azt_total_pack_years")=output.azt_total_pack_years
+
      // add other AZT-outputs here
 // #endif
+
   );
 }
-
-
-
-
-
 
 
 
@@ -1878,14 +1935,10 @@ void exacerbation_LPT(agent *ag)
 
 void payoffs_LPT(agent *ag)
 {
-  // if((*ag).gold>0){
-  //   Rprintf("time = %f, qaly = %f\n", (*ag).local_time, (*ag).payoffs_LPT);
-  // }
+
   (*ag).cumul_cost+=input.cost.bg_cost_by_stage[(*ag).gold]*((*ag).local_time-(*ag).payoffs_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
   (*ag).cumul_qaly+=input.utility.bg_util_by_stage[(*ag).gold]*((*ag).local_time-(*ag).payoffs_LPT)/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
-  if((*ag).gold>0){
-    Rprintf("insdie payoffs: medication = %f, cost_outpatient_diagnosis=%f, heaering = %f \n", input.medication.medication_adherence, input.cost.cost_outpatient_diagnosis, input.utility.hearing_dutil[1]);
-  }
+
   (*ag).payoffs_LPT=(*ag).local_time;
 
 }
@@ -2207,6 +2260,7 @@ double update_AZT_adverse_events(agent *ag) {
   if((*ag).azt_eligible){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
     if ((*ag).hearing_status == 0){
       if (rand_unif() < input.adv_event.hearing_loss_incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
+
         (*ag).hearing_status = 1;
         (*ag).time_at_hearing_loss = (*ag).local_time;
         if(on_azt){ // we stop AZT for anyone with hearing loss
@@ -2226,6 +2280,7 @@ double update_AZT_adverse_events(agent *ag) {
 
     if(rand_unif() < input.adv_event.gastro_prevalence*(pow(input.adv_event.gastro_rr, on_azt))){
       (*ag).gastro_status = 1; //if GI == True => assume he suffers from GI the whole year?
+      ++output.azt_n_GIs;
     }
     else{
       (*ag).gastro_status = 0;
@@ -2278,10 +2333,8 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 
 (*ag).time_at_creation=calendar_time;
 (*ag).sex=rand_unif()<input.agent.p_female;
-Rprintf("alaki-1 is %f",input.cost.bg_cost_by_stage[3]);
-Rprintf("alaki-2 is %f",input.comorbidity.p_stroke_death);
+// Rprintf("alaki-1 is %f",input.adv_event.hearing_loss_incidence);
 
-// Rprintf("alaki-2 is %f",input.medication.medication_ln_hr_exac[4]);
 
 
 (*ag).fev1_tail = sqrt(0.1845) * rand_norm() + 0.827;
@@ -2721,9 +2774,34 @@ agent *event_end_process(agent *ag)
   if((*ag).diagnosis>0 && (*ag).gold>0) output.total_diagnosed_time+=(*ag).local_time-(*ag).time_at_diagnosis;
 
 // #ifdef OUTPUT_AZT_CEA
-  output.azt_total_cost += (*ag).azt_eligible*((*ag).cumul_cost - (*ag).cost_pre_azt)*(pow(1+input.global_parameters.discount_cost,(*ag).local_time_at_AZT+calendar_time));
-  output.azt_total_qaly += (*ag).azt_eligible*((*ag).cumul_qaly - (*ag).qaly_pre_azt)*(pow(1+input.global_parameters.discount_qaly,(*ag).local_time_at_AZT+calendar_time));
+  if((*ag).azt_eligible){
+    ++output.azt_n_agents;
+    output.azt_n_men += ((*ag).sex == 0)*1;
+
+    output.azt_n_COPD+=((*ag).gold>0)*1;
+    output.azt_cumul_time+=(*ag).local_time;
+    output.azt_n_deaths+=!(*ag).alive;
+
+    output.azt_avg_age += ((*ag).age_at_creation + (*ag).local_time_at_AZT);
+    output.azt_avg_death_age += ((*ag).alive == false)*((*ag).age_at_creation + (*ag).local_time);
+
+    output.azt_total_exac[0]+=(*ag).cumul_exac[0];
+    output.azt_total_exac[1]+=(*ag).cumul_exac[1];
+    output.azt_total_exac[2]+=(*ag).cumul_exac[2];
+    output.azt_total_exac[3]+=(*ag).cumul_exac[3];
+
+    output.azt_total_gold[(*ag).gold]+=1;
+
+    output.azt_n_hearing+=((*ag).hearing_status>=1)*1;
+
+    output.azt_total_pack_years+=(*ag).pack_years;
+
+    output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(pow(1+input.global_parameters.discount_cost,(*ag).local_time_at_AZT+calendar_time));
+    output.azt_total_qaly += ((*ag).cumul_qaly - (*ag).qaly_pre_azt)*(pow(1+input.global_parameters.discount_qaly,(*ag).local_time_at_AZT+calendar_time));
+
+  }
 // #endif
+
 
 #ifdef OUTPUT_EX
   //NO!!! We do not update many of output_ex stuff here. It might fall within the same calendar year of the last fixed event and results in double counting.
@@ -3446,6 +3524,11 @@ void event_exacerbation_death_process(agent *ag)
   output_ex.n_exac_death_by_age_sex[(int)(floor((*ag).age_at_creation+(*ag).local_time))][(*ag).sex]+=1;
 
 #endif
+
+#ifdef OUTPUT_AZT_CEA
+  output.azt_n_exac_death+=((*ag).azt_eligible)*1;
+#endif
+
   //Rprintf("Death by chocolate!\n");
 }
 
@@ -3606,13 +3689,14 @@ double event_bgd_tte(agent *ag)
     double odds=p/(1-p)*_or;
     p=odds/(1+odds);
 
-// #ifdef OUTPUT_AZT_CEA
-//     double on_azt =
-//     if((*ag).azt_eligible && (*ag).local_time-(*ag).local_time_at_AZT < 5/365){
-//       p*= ((360+5*input.adv_event.cvd_rr)/365);
-//       if (p > 1) {p = 1;}
-//     }
-// #endif
+#ifdef OUTPUT_AZT_CEA
+    double on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
+
+    if(on_azt && (*ag).azt_eligible && ((*ag).local_time-(*ag).local_time_at_AZT) < (5/365)){
+        p*= ((360+5*input.adv_event.cvd_rr)/365);
+        if (p > 1) {p = 1;}
+    }
+#endif
 
     //adjusting background mortality for current smokers
     if ((*ag).smoking_status > 1e-5) {
@@ -3653,6 +3737,11 @@ double event_bgd_tte(agent *ag)
 void event_bgd_process(agent *ag)
 {
   (*ag).alive=false;
+
+#ifdef OUTPUT_AZT_CEA
+  output.azt_n_bg_death+=((*ag).azt_eligible)*1;
+#endif
+
 }
 
 
@@ -3750,6 +3839,7 @@ agent *event_fixed_process(agent *ag)
   medication_LPT(ag);
 
 #ifdef OUTPUT_AZT_CEA
+  // Rprintf("this is the id %f", (*ag).id);
   update_AZT_payoffs(ag);
   update_AZT_adverse_events(ag);
   update_AZT(ag); // Safa: criteria_met => azt_eligible  = TRUE + years in study monitored + update everything else
@@ -3984,10 +4074,12 @@ int Cmodel(int max_n_agents)
     }
 
 
-    while(((calendar_time+(*ag).local_time<input.global_parameters.time_horizon)
+    while(
+      (((calendar_time+(*ag).local_time)<input.global_parameters.time_horizon)
             // for AZT_CEA we want to follow all agents for 20 years so calendar_time is not important
-             | ((*ag).azt_eligible && ((*ag).local_time<input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
-            && (*ag).alive && (*ag).age_at_creation+(*ag).local_time<MAX_AGE)
+        | ((*ag).azt_eligible && ((*ag).local_time<(input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
+      )
+        && (*ag).alive && ((*ag).age_at_creation+(*ag).local_time)<MAX_AGE)
     {
       double tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
       if((*ag).azt_eligible){
@@ -4082,8 +4174,8 @@ int Cmodel(int max_n_agents)
       }
 
 
-      if((calendar_time+(*ag).local_time+tte<input.global_parameters.time_horizon) |
-         ((*ag).azt_eligible && (*ag).local_time+tte<input.global_parameters.time_horizon+(*ag).local_time_at_AZT))
+      if(((calendar_time+(*ag).local_time+tte)<input.global_parameters.time_horizon) |
+         ((*ag).azt_eligible && ((*ag).local_time+tte)<(input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
       {
         (*ag).tte=tte;
         (*ag).local_time=(*ag).local_time+tte;
@@ -4157,6 +4249,9 @@ int Cmodel(int max_n_agents)
       else
       {//past TH, set the local time to TH as the next step will be agent end;
         (*ag).tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
+        if((*ag).azt_eligible){
+          tte += (*ag).local_time_at_AZT;
+        }
         (*ag).local_time=(*ag).local_time+(*ag).tte;
       }
     }//while (within agent)

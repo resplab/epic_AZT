@@ -612,9 +612,6 @@ init_input <- function() {
 
 
   ##cost and utility
-  input_help$cost$alaki <- "to test "
-  input$cost$alaki <- 0.5
-
 
   input$cost$bg_cost_by_stage=t(as.matrix(c(N=0, I=135, II=330, III=864, IV=1178)))
   input_help$cost$bg_cost_by_stage="Annual direct (NON-TREATMENT) maintenance costs for non-COPD and COPD by GOLD grades"
