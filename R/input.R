@@ -500,6 +500,10 @@ init_input <- function() {
   input$medication$medication_adherence <- 0.7
   input_ref$medication$medication_adherence <- ""
 
+  input$medication$AZT_effect <- 0.27
+
+  input$medication$is_AZT_group <- 1
+
   # medication log-hazard regression matrix for rate reduction in exacerbations
   input_help$medication$medication_ln_hr_exac <- "Rate reduction in exacerbations due to treatment"
   input$medication$medication_ln_hr_exac<-c(None=0,
@@ -519,22 +523,39 @@ init_input <- function() {
                                             ICS_LAMA_LABA_SABA=log((1-0.34)^input$medication$medication_adherence),
 
                                             #Safa :
-                                            AZT=log((1-0.31)^input$medication$medication_adherence),
-                                            SABA_AZT=log((1-0.31)^input$medication$medication_adherence),
-                                            LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
-                                            SABA_LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
-                                            LAMA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
-                                            LAMA_SABA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
-                                            LAMA_LABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
-                                            LAMA_LABA_SABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
-                                            ICS_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
-                                            ICS_SABA_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
-                                            ICS_LABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
-                                            ICS_LABA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
-                                            ICS_LAMA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
-                                            ICS_LAMA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
-                                            ICS_LAMA_LABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
-                                            ICS_LAMA_LABA_SABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence)
+                                            AZT=log((1-0.27)^input$medication$medication_adherence),
+                                            SABA_AZT=log((1-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            LABA_AZT=log((1-0.20-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            SABA_LABA_AZT=log((1-0.20-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            LAMA_AZT=log((1-0.22-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            LAMA_SABA_AZT=log((1-0.22-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            LAMA_LABA_AZT=log((1-0.23-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            LAMA_LABA_SABA_AZT=log((1-0.23-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_AZT=log((1-0.19-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_SABA_AZT=log((1-0.19-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LABA_AZT=log((1-0.25-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LABA_SABA_AZT=log((1-0.25-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LAMA_AZT=log((1-0.25-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LAMA_SABA_AZT=log((1-0.25-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LAMA_LABA_AZT=log((1-0.34-input$medication$AZT_effect)^input$medication$medication_adherence),
+                                            ICS_LAMA_LABA_SABA_AZT=log((1-0.34-input$medication$AZT_effect)^input$medication$medication_adherence)
+
+                                            # AZT=log((1-0.31)^input$medication$medication_adherence),
+                                            # SABA_AZT=log((1-0.31)^input$medication$medication_adherence),
+                                            # LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
+                                            # SABA_LABA_AZT=log((1-0.20-0.31)^input$medication$medication_adherence),
+                                            # LAMA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
+                                            # LAMA_SABA_AZT=log((1-0.22-0.31)^input$medication$medication_adherence),
+                                            # LAMA_LABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
+                                            # LAMA_LABA_SABA_AZT=log((1-0.23-0.31)^input$medication$medication_adherence),
+                                            # ICS_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
+                                            # ICS_SABA_AZT=log((1-0.19-0.31)^input$medication$medication_adherence),
+                                            # ICS_LABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            # ICS_LABA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            # ICS_LAMA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            # ICS_LAMA_SABA_AZT=log((1-0.25-0.31)^input$medication$medication_adherence),
+                                            # ICS_LAMA_LABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence),
+                                            # ICS_LAMA_LABA_SABA_AZT=log((1-0.34-0.31)^input$medication$medication_adherence)
                                             )
 
   input_ref$medication$medication_ln_hr_exac <- "LAMA-Zhou et al. 2017, LAMA/LABA-UPLIFT 2008, ICS/LAMA/LABA-KRONOS 2018"
@@ -550,9 +571,14 @@ init_input <- function() {
 
   ## Adverse Events - for Azithromycin  #Safa
 
-  input_help$adv_event$hearing_loss_incidence <- "hearing loss incidence rate"
+  input_help$adv_event$hearing_loss_incidence <- "hearing loss incidence rate in +70 "
   input$adv_event$hearing_loss_incidence <- 0.023
   input_ref$adv_event$hearing_loss_incidence <- "Lin et al."
+
+  input_help$adv_event$hearing_loss_incidence_young_adults <- "hearing loss incidence rate in 40-70 "
+  input$adv_event$hearing_loss_incidence_young_adults <- 0.014
+  input_ref$adv_event$hearing_loss_incidence_young_adults <- " prev = -0.5478+0.014*age baseed on : https://www150.statcan.gc.ca/n1/pub/82-003-x/2015007/article/14206/tbl/tbl1-eng.htm"
+
 
   input_help$adv_event$hearing_loss_rr <- "Relative-risk of hearing-loss due to azithromycin"
   input$adv_event$hearing_loss_rr <- 1.168
@@ -571,12 +597,16 @@ init_input <- function() {
   input_ref$adv_event$cvd_rr <- "Ray et al."
 
   input_help$adv_event$resistance <- "Resistance parameter in {{RR}_0}^{exp(-k*(year-1))}"
-  input$adv_event$resistance <- 0.22
+  input$adv_event$resistance <- -0.22
   input_ref$adv_event$resistance <- "based on Pomares et al."
 
-  # input_help$adv_event$hearing_aid_adherence <- "hearing_aid_adherence"
-  # input$adv_event$hearing_aid_adherence <- 1
-  # input_ref$adv_event$hearing_aid_adherence <- ""
+  input_help$adv_event$hearing_aid_adherence <- "hearing_aid_adherence"
+  input$adv_event$hearing_aid_adherence <- 1 #new
+  input_ref$adv_event$hearing_aid_adherence <- "NICE:Cost-effectiveness analysis: early versus delayed management of hearing loss :0.8 but we chose 1 as in the harm_benefit study"
+
+  input$adv_event$cvd_prob_5days <- 0.0003
+  input_ref$adv_event$cvd_prob_5days <-"Ray et al"
+
 
   ### comorbidity mi - not implemented
   input$comorbidity$logit_p_mi_betas_by_sex = cbind(male = c(intercept = -3000, age = 0.001, age2 = 0, pack_years = 0.01, smoking = 0.001,
@@ -613,18 +643,23 @@ init_input <- function() {
 
   ##cost and utility
 
-  input$cost$bg_cost_by_stage=t(as.matrix(c(N=0, I=135, II=330, III=864, IV=1178)))
+  #Safa: *1.072 to change 2015 costs to 2020
+
+  input$cost$bg_cost_by_stage=t(as.matrix(c(N=0, I=135, II=330, III=864, IV=1178)*1.072))
   input_help$cost$bg_cost_by_stage="Annual direct (NON-TREATMENT) maintenance costs for non-COPD and COPD by GOLD grades"
   #  input$cost$ind_bg_cost_by_stage=t(as.matrix(c(N=0, I=40, II=80, III=134, IV=134))) #TODO Not implemented in C yet.
   #  input_help$cost$ind_bg_cost_by_stage="Annual inddirect costs for non-COPD, and COPD by GOLD grades"
-  input$cost$exac_dcost=t(as.matrix(c(mild=29,moderate=726,severe=9212, verysevere=20170)))
+  input$cost$exac_dcost=t(as.matrix(c(mild=29,moderate=726,severe=9212, verysevere=20170)*1.072))
   input_help$cost$exac_dcost="Incremental direct costs of exacerbations by severity levels"
 
   input$cost$cost_case_detection <- input$diagnosis$case_detection_methods[3,"None"]
   input_help$cost$cost_case_detection <- "Cost of case detection"
 
-  input$cost$cost_outpatient_diagnosis <- 98.89
+  input$cost$cost_outpatient_diagnosis <- 98.89*1.072
   input_help$cost$cost_outpatient_diagnosis <- "Cost of diagnostic spirometry"
+
+  # input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
+
 
   # Costs of adverse events of AZT (Safa)
 
@@ -638,21 +673,48 @@ init_input <- function() {
                                         ICS_LAMA_LABA=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA=0,
                                         #Safa :
                                         AZT=0,
-                                        SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
-                                        LAMA_AZT=0, LAMA_SABA_AZT=0,
-                                        LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
+                                        SABA_AZT=72.15*input$medication$medication_adherence, LABA_AZT=0, SABA_LABA_AZT=0,
+                                        LAMA_AZT=479.35*input$medication$medication_adherence, LAMA_SABA_AZT=0,
+                                        LAMA_LABA_AZT=876.76*input$medication$medication_adherence, LAMA_LABA_SABA_AZT=0,
                                         ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
-                                        ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
+                                        ICS_LAMA_LABA_AZT=1549.97*input$medication$medication_adherence, ICS_LAMA_LABA_SABA_AZT=0)*1.072
   input_ref$cost$medication_costs <- "BC administrative data"
+
+  input$cost$annual_AZT_costs <- 207 #new
+  input_help$cost$annual_AZT_costs <- "Annual audiology screening + Daily azithromycin "
+
+  input$cost$cost_hearing_assessment <- 193 #new
+  input_help$cost$cost_hearing_assessment <- "Cost of audiology assessment"
+
+  input$cost$cost_hearing_aid <- 3425.58#new
+  input_help$cost$cost_hearing_aid <- "Cost of hearing aids"
+
+  input$cost$cost_hearing_loss_annual<- 118#new
+  input_help$cost$cost_hearing_loss_annual <- "Annual cost of hearing loss = 2*60 Batteries plus 2 repair appointment"
+
+  input$cost$cost_hearing_loss_management<- 3053.58#new
+  input_help$cost$cost_hearing_loss <- "cost of management of hearing loss per 3 years"
+
+  input$cost$cost_GIs <- 471.64 #new
+  input_help$cost$cost_GIs <- "Cost of gastrointestinal symptoms"
+
+
+  input$cost$cost_cvd <- 39044.3
+  input_help$cost$cost_cvd <- "Look at the table of manuscript"
+
+  input$cost$cost_GP_visit <- 84.45
+  input_help$cost$cost_GP_visit <- "ON Physician Schedule of Benefits"
+
 
   # disutility of adverse events of AZT (Safa)
   input_help$utility$hearing_dutil <- "disutility of hearing loss"
-  input$utility$hearing_dutil <- c(0, -0.187, -0.127)
+  input$utility$hearing_dutil <- c(0, -0.187, -0.127,-0.187)
   input_ref$utility$hearing_dutil <- "NICE and Barton et al."
 
   input_help$utility$gis_dutil <- "disutility of GI symptosm"
   input$utility$gis_dutil <- -0.0261
   input_ref$utility$gis_dutil <- "Sullivan et al."
+
 
   # utility from medications
   input_help$utility$medication_utility <- "Utility addition from treatment"
@@ -661,15 +723,13 @@ init_input <- function() {
                                           ICS_LAMA_SABA=0, ICS_LAMA_LABA=0.0367, ICS_LAMA_LABA_SABA=0,
                                          #Safa :
                                          AZT=0,
-                                         SABA_AZT=0, LABA_AZT=0, SABA_LABA_AZT=0,
-                                         LAMA_AZT=0, LAMA_SABA_AZT=0,
-                                         LAMA_LABA_AZT=0, LAMA_LABA_SABA_AZT=0,
+                                         SABA_AZT=0.0367, LABA_AZT=0, SABA_LABA_AZT=0,
+                                         LAMA_AZT=0.0367, LAMA_SABA_AZT=0,
+                                         LAMA_LABA_AZT=0.0367, LAMA_LABA_SABA_AZT=0,
                                          ICS_AZT=0, ICS_SABA_AZT=0, ICS_LABA_AZT=0, ICS_LABA_SABA_AZT=0, ICS_LAMA_AZT=0, ICS_LAMA_SABA_AZT=0,
-                                         ICS_LAMA_LABA_AZT=0, ICS_LAMA_LABA_SABA_AZT=0)
+                                         ICS_LAMA_LABA_AZT=0.0367, ICS_LAMA_LABA_SABA_AZT=0)
   input_ref$utility$medication_utility <- "Lambe et al. Thorax 2019"
 
-
-  # input$cost$doctor_visit_by_type<-t(as.matrix(c(50,150)))
 
   input$utility$bg_util_by_stage=t(as.matrix(c(N=0.86, I=0.81,II=0.72,III=0.68,IV=0.58)))
   input_help$utility$bg_util_by_stage="Background utilities for non-COPD, and COPD by GOLD grades"

@@ -12,49 +12,267 @@ petoc <- function() {
   }
 }
 
+run_sanity_check <- function(input){
+
+  settings <- get_default_settings()
+  settings$n_base_agents <- 250000 # change number of agents here
+  init_session(settings = settings)
+
+  #for Placeebo group:
+  input$medication$is_AZT_group = 0;
+
+  res <- run(input = input)
+
+  op <- Cget_output()
+  print("n_agents")
+  print(op$azt_n_agents)
+  print("costs")
+  print(op$azt_total_cost/op$azt_n_agents)
+  print("qaly")
+  print(op$azt_total_qaly/op$azt_n_agents)
+  temps <- (op$azt_total_exac/op$azt_n_agents)
+  print(" total exacs")
+  total_exacs <- sum(temps[2:4])
+  print(total_exacs)
+
+}
+
+sanity_check_AZT_CEA <- function() { # Remember to remove _azt before all total_ outcomes! get the original version from original_epic!
+
+  init_session()
+
+
+  cat("test 1: no effect/ no adverse event\n")
+  input <- model_input$values
+
+  input$medication$AZT_effect = 0
+  input$adv_event$hearing_loss_rr =1
+  input$adv_event$gastro_rr=1
+  input$adv_event$cvd_rr=1
+
+  run_sanity_check(input)
+  cat("test 2: No effect/No adverse event/ no discount\n")
+  input <- model_input$values
+
+  input$medication$AZT_effect = 0
+  input$adv_event$hearing_loss_rr =1
+  input$adv_event$gastro_rr=1
+  input$adv_event$cvd_rr=1
+  input$global_parameters$discount_qaly = 0
+  input$global_parameters$discount_cost = 0
+
+  run_sanity_check(input)
+  cat("test 3: no effect but hearing loss\n")
+  input <- model_input$values
+
+  input$medication$AZT_effect = 0
+  input$adv_event$gastro_rr=1
+  input$adv_event$cvd_rr=1
+
+  run_sanity_check(input)
+
+  cat("test 4: No effect + but all adverse event\n")
+  input <- model_input$values
+
+  input$medication$AZT_effect = 0
+
+  run_sanity_check(input)
+  cat("test 5: effect without adverse event\n")
+  input <- model_input$values
+
+  input$adv_event$hearing_loss_rr =1
+  input$adv_event$gastro_rr=1
+  input$adv_event$cvd_rr=1
+
+  run_sanity_check(input)
+  cat("test 6: Effect + resistance + no other adverse event\n")
+  input <- model_input$values
+
+  input$adv_event$hearing_loss_rr =1
+  input$adv_event$gastro_rr=1
+  input$adv_event$cvd_rr=1
+
+  run_sanity_check(input)
+
+  cat("test 7: No resistance\n")
+  input <- model_input$values
+
+  input$adv_event$resistance = 0
+
+  run_sanity_check(input)
+  cat("test 8: Hearing_aid adherence = 80% \n")
+  input <- model_input$values
+
+  input$adv_event$hearing_aid_adherence = 0.8
+
+  run_sanity_check(input)
+
+  cat("test 9: No utility except baseline \n")
+  input <- model_input$values
+
+  for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0
+  input$utility$bg_util_by_stage=t(as.matrix(c(N=0.86, I=0.81,II=0.77,III=0.68,IV=0.58)))
+
+  run_sanity_check(input)
+
+  terminate_session()
+
+}
 
 #' Basic tests of model functionalty. Serious issues if the test does not pass.
 #' @return tests results
 #' @export
-sanity_check <- function() {
+sanity_check <- function() { # Remember to remove _azt before all total_ outcomes! get the original version from original_epic!
   init_session()
 
-  cat("test 1: zero all costs\n")
-  input <- model_input$values
-  for (el in get_list_elements(input$cost)) input$cost[[el]] <- input$cost[[el]] * 0
-  res <- run(1, input = input)
-  if (Cget_output()$total_cost != 0)
-    message("Test failed!") else message("Test passed!")
 
-
-  message("test 2: zero all utilities\n")
+  cat("test 1: no adverse event\n")
   input <- model_input$values
+
   for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0
-  res <- run(input = input)
-  if (Cget_output()$total_qaly != 0)
-    message("Test failed!") else message("Test passed!")
+  input$utility$bg_util_by_stage=t(as.matrix(c(N=0.86, I=0.81,II=0.77,III=0.68,IV=0.58)))
 
+  input$medication$is_AZT_group = 0;
 
-  message("test 3: one all utilities ad get one QALY without discount\n")
+  run_sanity_check(input)
+
+  cat("test 2: no adverse event\n")
   input <- model_input$values
-  input$global_parameters$discount_qaly <- 0
-  for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0 + 1
-  input$utility$exac_dutil = input$utility$exac_dutil * 0
-  res <- run(input = input)
-  if (Cget_output()$total_qaly/Cget_output()$cumul_time != 1)
-    message("Test failed!") else message("Test passed!")
+
+  for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0
+  input$utility$bg_util_by_stage=t(as.matrix(c(N=0.86, I=0.81,II=0.77,III=0.68,IV=0.58)))
+
+  input$medication$is_AZT_group = 0;
+
+  # input$medication$AZT_effect = 0
+  # input$adv_event$hearing_loss_rr =1
+  # input$adv_event$gastro_rr=1
+  # input$adv_event$cvd_rr=1
+  #
+  #
+  # input$cost$annual_AZT_costs = 0
 
 
-  message("test 4: zero mortality (both bg and exac)\n")
-  input <- model_input$values
-  input$exacerbation$logit_p_death_by_sex <- input$exacerbation$logit_p_death_by_sex * 0 - 10000000  # log scale'
-  input$agent$p_bgd_by_sex <- input$agent$p_bgd_by_sex * 0
-  input$manual$explicit_mortality_by_age_sex <- input$manual$explicit_mortality_by_age_sex * 0
-  res <- run(input = input)
-  if (Cget_output()$n_deaths != 0) {
-    message (Cget_output()$n_deaths)
-    stop("Test failed!")
-  } else message("Test passed!")
+  # input$global_parameters$discount_qaly = 0
+  # input$global_parameters$discount_cost = 0
+
+
+
+
+
+
+  # input$utility$hearing_dutil[4]= c(0,0,0,0);
+  # input$utility$gis_dutil=0;
+  #
+  #
+  # input$cost$annual_AZT_costs =0;
+  # input$cost$cost_hearing_assessment=0;
+  # input$cost$cost_hearing_aid=0;
+  # input$cost$cost_hearing_loss_annual=0;
+  # input$cost$cost_hearing_loss_management=0;
+  # input$cost$cost_GIs=0;
+  # input$cost$cost_cvd=0;
+
+    # input$cost$annual_AZT_costs <- 207 #new
+
+
+  # input$cost$cost_hearing_assessment <- 193 #new
+  # input$cost$cost_hearing_aid <- 3239.58#new
+  # input$cost$cost_hearing_loss_annual<- 118#new
+  # input$cost$cost_hearing_loss_management<- 3053.58#new
+
+  # input$cost$cost_GIs <- 471.64 #new
+
+  # input$cost$exac_dcost=t(as.matrix(c(mild=29,moderate=726,severe=9212, verysevere=20170)*1.072))
+
+
+
+  # if (Cget_output()$azt_total_cost != 0)
+  #   message("Test failed!") else message("Test passed!")
+
+  # cat("test 1: zero all costs\n")
+  # input <- model_input$values
+  # for (el in get_list_elements(input$cost)) input$cost[[el]] <- input$cost[[el]]
+
+
+  # input$cost$annual_AZT_costs <- 207 #new
+
+
+  # input$cost$cost_hearing_assessment <- 193 #new
+  # input$cost$cost_hearing_aid <- 3239.58#new
+  # input$cost$cost_hearing_loss_annual<- 118#new
+  # input$cost$cost_hearing_loss_management<- 3053.58#new
+
+  # input$cost$cost_GIs <- 471.64 #new
+
+  # input$cost$exac_dcost=t(as.matrix(c(mild=29,moderate=726,severe=9212, verysevere=20170)*1.072))
+
+  # res <- run(1000, input = input)
+  # print(Cget_output()$azt_total_cost)
+  # print(Cget_output()$azt_n_agents)
+  # if (Cget_output()$azt_total_cost != 0)
+  #   message("Test failed!") else message("Test passed!")
+  #
+  #
+  # message("test 2: zero all utilities\n")
+  # input <- model_input$values
+  # for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0
+  # res <- run(1000,input = input)
+  # if (Cget_output()$azt_total_qaly != 0)
+  #   message("Test failed!") else message("Test passed!")
+  #
+  # message("test 3: stop decline in the treatmeent effect\n")
+  # input <- model_input$values
+  # res <- run(20000,input = input)
+  # first_exacs <- sum(Cget_output()$azt_total_exac[2:4])
+  # input$adv_event$resistance = 1
+  # res <- run(20000,input = input)
+  # second_exacs <- sum(Cget_output()$azt_total_exac[2:4])
+  # if (first_exacs < second_exacs)
+  #   message("Test failed!") else message("Test passed!")
+  #
+  # message("test 3: stop decline in the treatmeent effect\n")
+  # input <- model_input$values
+  # res <- run(20000,input = input)
+  # first_cost <- sum(Cget_output()$azt_total_cost)
+  # first_qaly <- sum(Cget_output()$azt_total_qaly)
+  #
+  # input$global_parameters$discount_cost = 0
+  # input$global_parameters$discount_qaly = 0
+  # res <- run(20000,input = input)
+  # second_cost <- sum(Cget_output()$azt_total_cost)
+  # second_qaly <- sum(Cget_output()$azt_total_qaly)
+  # if (second_cost < first_cost || second_qaly < first_qaly)
+  #   message("Test failed!") else message("Test passed!")
+
+  #
+  # message("test 3: one all utilities ad get one QALY without discount\n")
+  # input <- model_input$values
+  # input$global_parameters$discount_qaly <- 0
+  # for (el in get_list_elements(input$utility)) input$utility[[el]] <- input$utility[[el]] * 0 + 1
+  # input$utility$exac_dutil = input$utility$exac_dutil * 0
+  # input$utility$gis_dutil = input$utility$gis_dutil * 0
+  # input$utility$hearing_dutil = input$utility$hearing_dutil * 0
+  #
+  # res <- run(1,input = input)
+  # check = (Cget_output()$azt_total_qaly/Cget_output()$azt_cumul_time)
+  # print(check)
+  #
+  # if ( check == 1)
+  #   message("Test passed!") else message("Test failed!")
+  #
+  #
+  # message("test 4: zero mortality (both bg and exac)\n")
+  # input <- model_input$values
+  # input$exacerbation$logit_p_death_by_sex <- input$exacerbation$logit_p_death_by_sex * 0 - 10000000  # log scale'
+  # input$agent$p_bgd_by_sex <- input$agent$p_bgd_by_sex * 0
+  # input$manual$explicit_mortality_by_age_sex <- input$manual$explicit_mortality_by_age_sex * 0
+  # res <- run(1,input = input)
+  # if (Cget_output()$azt_n_deaths != 0) {
+  #   message (Cget_output()$azt_n_deaths)
+  #   stop("Test failed!")
+  # } else message("Test passed!")
+
   terminate_session()
   return(0)
 }

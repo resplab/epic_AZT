@@ -19,6 +19,7 @@ Layout:
 */
 
 
+
 #define OUTPUT_EX_BIOMETRICS 1 //height, weight etc;
 #define OUTPUT_EX_SMOKING 2
 #define OUTPUT_EX_COMORBIDITY 4
@@ -603,6 +604,15 @@ struct input
     double mi_post_cost;
     double stroke_dcost;
     double stroke_post_dcost;
+
+    double annual_AZT_costs;
+    double cost_hearing_assessment;
+    double cost_hearing_aid;
+    double cost_hearing_loss_annual;
+    double cost_hearing_loss_management;
+    double cost_GIs;
+    double cost_cvd;
+    double cost_GP_visit;
   } cost;
 
   struct
@@ -610,7 +620,7 @@ struct input
     double bg_util_by_stage[5];
     double exac_dutil[4][4];
     double medication_utility[32]; //Safa
-    double hearing_dutil[3];//Safa
+    double hearing_dutil[4];//Safa
     double gis_dutil;//Safa
     double mi_dutil;
     double mi_post_dutil;
@@ -636,6 +646,9 @@ struct input
     double ln_h_start_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_h_stop_betas_by_class[N_MED_CLASS][3+N_MED_CLASS];
     double ln_rr_exac_by_class[N_MED_CLASS];
+    double AZT_effect;
+    int is_AZT_group;
+
   } medication;
 
   struct
@@ -656,11 +669,14 @@ struct input
   struct
   {
     double hearing_loss_incidence;
+    double hearing_loss_incidence_young_adults;
     double hearing_loss_rr;
     double gastro_prevalence;
     double gastro_rr;
+    double cvd_prob_5days;
     double cvd_rr;
     double resistance;
+    double hearing_aid_adherence;
   } adv_event;
 
   struct
@@ -800,7 +816,17 @@ List Cget_inputs()
       Rcpp::Named("cost_case_detection")=input.cost.cost_case_detection,
       Rcpp::Named("cost_outpatient_diagnosis")=input.cost.cost_outpatient_diagnosis,
       Rcpp::Named("medication_costs")=AS_VECTOR_DOUBLE(input.cost.medication_costs),
-      Rcpp::Named("doctor_visit_by_type")=AS_VECTOR_DOUBLE(input.cost.doctor_visit_by_type)
+      Rcpp::Named("doctor_visit_by_type")=AS_VECTOR_DOUBLE(input.cost.doctor_visit_by_type),
+      //Safa
+      Rcpp::Named("annual_AZT_costs")=input.cost.annual_AZT_costs,
+      Rcpp::Named("cost_hearing_assessment")=input.cost.cost_hearing_assessment,
+      Rcpp::Named("cost_hearing_aid")=input.cost.cost_hearing_aid,
+      Rcpp::Named("cost_hearing_loss_annual")=input.cost.cost_hearing_loss_annual,
+      Rcpp::Named("cost_hearing_loss_management")=input.cost.cost_hearing_loss_management,
+      Rcpp::Named("cost_GIs")=input.cost.cost_GIs,
+      Rcpp::Named("cost_cvd")=input.cost.cost_cvd,
+      Rcpp::Named("cost_GP_visit")=input.cost.cost_GP_visit
+
     ),
 
     Rcpp::Named("utility")=Rcpp::List::create(
@@ -816,16 +842,23 @@ List Cget_inputs()
       Rcpp::Named("medication_adherence")=input.medication.medication_adherence,
       Rcpp::Named("ln_h_start_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_start_betas_by_class),
       Rcpp::Named("ln_h_stop_betas_by_class")=AS_MATRIX_DOUBLE(input.medication.ln_h_stop_betas_by_class),
-      Rcpp::Named("ln_rr_exac_by_class")=AS_VECTOR_DOUBLE(input.medication.ln_rr_exac_by_class)
+      Rcpp::Named("ln_rr_exac_by_class")=AS_VECTOR_DOUBLE(input.medication.ln_rr_exac_by_class),
+      Rcpp::Named("AZT_effect")=input.medication.AZT_effect,
+      Rcpp::Named("is_AZT_group")=input.medication.is_AZT_group
+
+
   ),
   //Safa:
   Rcpp::Named("adv_event")=Rcpp::List::create(
     Rcpp::Named("hearing_loss_incidence")=input.adv_event.hearing_loss_incidence,
+    Rcpp::Named("hearing_loss_incidence_young_adults")=input.adv_event.hearing_loss_incidence_young_adults,
     Rcpp::Named("hearing_loss_rr")=input.adv_event.hearing_loss_rr,
     Rcpp::Named("gastro_prevalence")=input.adv_event.gastro_prevalence,
     Rcpp::Named("gastro_rr")=input.adv_event.gastro_rr,
+    Rcpp::Named("cvd_prob_5days")=input.adv_event.cvd_prob_5days,
     Rcpp::Named("cvd_rr")=input.adv_event.cvd_rr,
-    Rcpp::Named("resistance")=input.adv_event.resistance
+    Rcpp::Named("resistance")=input.adv_event.resistance,
+    Rcpp::Named("hearing_aid_adherence")=input.adv_event.hearing_aid_adherence
   )
   ,
   Rcpp::Named("project_specific")=Rcpp::List::create(
@@ -940,6 +973,10 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="medication$ln_h_start_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_start_betas_by_class);
   if(name=="medication$ln_h_stop_betas_by_class") READ_R_MATRIX(value,input.medication.ln_h_stop_betas_by_class);
   if(name=="medication$ln_rr_exac_by_class") READ_R_VECTOR(value,input.medication.ln_rr_exac_by_class);
+  if(name=="medication$AZT_effect") {input.medication.AZT_effect=value[0]; return(0);};
+  if(name=="medication$is_AZT_group") {input.medication.is_AZT_group=value[0]; return(0);};
+
+
 
   if(name=="cost$bg_cost_by_stage") READ_R_VECTOR(value,input.cost.bg_cost_by_stage);
   if(name=="cost$cost_case_detection") {input.cost.cost_case_detection=value[0]; return(0);};
@@ -947,6 +984,16 @@ int Cset_input_var(std::string name, NumericVector value)
   if(name=="cost$exac_dcost") READ_R_VECTOR(value,input.cost.exac_dcost);
   if(name=="cost$doctor_visit_by_type") READ_R_VECTOR(value,input.cost.doctor_visit_by_type);
   if(name=="cost$medication_costs") READ_R_VECTOR(value,input.cost.medication_costs);
+  //Safa:
+  if(name=="cost$annual_AZT_costs") {input.cost.annual_AZT_costs=value[0]; return(0);};
+  if(name=="cost$cost_hearing_assessment") {input.cost.cost_hearing_assessment=value[0]; return(0);};
+  if(name=="cost$cost_hearing_aid") {input.cost.cost_hearing_aid=value[0]; return(0);};
+  if(name=="cost$cost_hearing_loss_annual") {input.cost.cost_hearing_loss_annual=value[0]; return(0);};
+  if(name=="cost$cost_hearing_loss_management") {input.cost.cost_hearing_loss_management=value[0]; return(0);};
+  if(name=="cost$cost_GIs") {input.cost.cost_GIs=value[0]; return(0);};
+  if(name=="cost$cost_cvd") {input.cost.cost_cvd=value[0]; return(0);};
+  if(name=="cost$cost_GP_visit") {input.cost.cost_GP_visit=value[0]; return(0);};
+
 
   if(name=="utility$bg_util_by_stage") READ_R_VECTOR(value,input.utility.bg_util_by_stage);
   if(name=="utility$exac_dutil") READ_R_MATRIX(value,input.utility.exac_dutil);
@@ -966,11 +1013,14 @@ int Cset_input_var(std::string name, NumericVector value)
 
   //Safa:
   if(name=="adv_event$hearing_loss_incidence") {input.adv_event.hearing_loss_incidence=value[0]; return(0);};
+  if(name=="adv_event$hearing_loss_incidence_young_adults") {input.adv_event.hearing_loss_incidence_young_adults=value[0]; return(0);};
   if(name=="adv_event$hearing_loss_rr") {input.adv_event.hearing_loss_rr=value[0]; return(0);};
   if(name=="adv_event$gastro_prevalence") {input.adv_event.gastro_prevalence=value[0]; return(0);};
   if(name=="adv_event$gastro_rr") {input.adv_event.gastro_rr=value[0]; return(0);};
+  if(name=="adv_event$cvd_prob_5days") {input.adv_event.cvd_prob_5days=value[0]; return(0);};
   if(name=="adv_event$cvd_rr") {input.adv_event.cvd_rr=value[0]; return(0);};
   if(name=="adv_event$resistance") {input.adv_event.resistance=value[0]; return(0);};
+  if(name=="adv_event$hearing_aid_adherence") {input.adv_event.hearing_aid_adherence=value[0]; return(0);};
 
   //Define your project-specific inputs here;
 
@@ -1054,7 +1104,18 @@ struct agent
   double medication_LPT;
 
   double cumul_cost;
+  //safa
+  double cumul_cost_hearing;
+  double cumul_cost_gi;
+  double cumul_cost_exac;
+
+  //safa
   double cumul_qaly;
+  double cumul_qaly_hearing;
+  double cumul_qaly_gi;
+  double cumul_qaly_exac;
+
+
 
   double payoffs_LPT;
 
@@ -1095,18 +1156,24 @@ struct agent
 
 // #ifdef OUTPUT_AZT_CEA
 
+  int azt_test_var;
+
   double local_time_at_AZT;
+  double azt_time_horizon;
   int azt_eligible ;
 
   int hearing_status;
   int gastro_status;
+  int cv_status;
   double time_at_hearing_loss;
+  double azt_resistance;
 
   double notmild_exac_history_time_first, notmild_exac_history_time_second;
   int notmild_exac_history_severity_first, notmild_exac_history_severity_second;
 
   double cost_pre_azt;
   double qaly_pre_azt;
+  int exac_pre_azt[4];
 
 // #endif
 
@@ -1217,14 +1284,27 @@ List get_agent(agent *ag)
 
   out["cumul_cost"] = (*ag).cumul_cost;
   out["cumul_qaly"] = (*ag).cumul_qaly;
+  //safa
+  out["cumul_cost_hearing"] = (*ag).cumul_cost_hearing;
+  out["cumul_cost_gi"] = (*ag).cumul_cost_gi;
+  out["cumul_cost_exac"] = (*ag).cumul_cost_exac;
+
+  out["cumul_qaly_hearing"] = (*ag).cumul_qaly_hearing;
+  out["cumul_qaly_gi"] = (*ag).cumul_qaly_gi;
+  out["cumul_qaly_exac"] = (*ag).cumul_qaly_exac;
 
 // #ifdef OUTPUT_AZT_CEA
 
   out["local_time_at_AZT"]=(*ag).local_time_at_AZT;
+  out["azt_time_horizon"]=(*ag).azt_time_horizon;
+
   out["azt_eligible "]=(*ag).azt_eligible ;
 
   out["hearing_status"]=(*ag).hearing_status;
   out["gastro_status"]=(*ag).gastro_status;
+  out["cv_status"]=(*ag).cv_status;
+  out["azt_resistance"]=(*ag).azt_resistance;
+
   out["time_at_hearing_loss"]=(*ag).time_at_hearing_loss;
 
   out["notmild_exac_history_time_first"]=(*ag).notmild_exac_history_time_first;
@@ -1234,6 +1314,7 @@ List get_agent(agent *ag)
 
   out["cost_pre_azt"]=(*ag).cost_pre_azt;
   out["qaly_pre_azt"]=(*ag).qaly_pre_azt;
+
 
 // #endif
 
@@ -1450,11 +1531,18 @@ struct output
   double azt_total_cost;    //END because agent records
   double azt_total_qaly;  //END because agent records
 
+  double azt_total_cost_hearing;    //END because agent records
+  double azt_total_cost_gi;    //END because agent records
+
+  double azt_total_qaly_hearing;  //END because agent records
+  double azt_total_qaly_gi;  //END because agent records
+
   int azt_n_hearing;
   int azt_n_GIs;
 
   int azt_n_bg_death;
   int azt_n_exac_death;
+  int azt_n_cv_death;
 
   double azt_total_pack_years;
 // #endif
@@ -1514,11 +1602,17 @@ void reset_output()
   output.azt_total_cost=0;
   output.azt_total_qaly=0;
 
+  output.azt_total_cost_hearing=0;
+  output.azt_total_qaly_hearing=0;
+  output.azt_total_cost_gi=0;
+  output.azt_total_qaly_gi=0;
+
   output.azt_n_hearing=0;
   output.azt_n_GIs=0;
 
   output.azt_n_bg_death=0;
   output.azt_n_exac_death=0;
+  output.azt_n_cv_death=0;
 
   output.azt_total_pack_years=0;
 // #endif
@@ -1533,10 +1627,10 @@ List Cget_output()
 {
   return Rcpp::List::create(
     Rcpp::Named("n_agents")=output.n_agents,
-    Rcpp::Named("cumul_time")=output.cumul_time,
-    Rcpp::Named("n_deaths")=output.n_deaths,
-    Rcpp::Named("n_COPD")=output.n_COPD,
-    Rcpp::Named("total_exac")=AS_VECTOR_INT(output.total_exac),
+    // Rcpp::Named("cumul_time")=output.cumul_time,
+    // Rcpp::Named("n_deaths")=output.n_deaths,
+    // Rcpp::Named("n_COPD")=output.n_COPD,
+    // Rcpp::Named("total_exac")=AS_VECTOR_INT(output.total_exac),
     // Rcpp::Named("total_exac_time")=AS_VECTOR_DOUBLE(output.total_exac_time),
     // Rcpp::Named("total_pack_years")=output.total_pack_years,
     // Rcpp::Named("total_doctor_visit")=AS_VECTOR_INT(output.total_doctor_visit),
@@ -1547,26 +1641,38 @@ List Cget_output()
 
 // #ifdef OUTPUT_AZT_CEA //Safa
     Rcpp::Named("azt_n_agents")=output.azt_n_agents,
-    Rcpp::Named("azt_n_men")=output.azt_n_men,
+    // Rcpp::Named("azt_n_men")=output.azt_n_men,
 
       Rcpp::Named("azt_cumul_time")=output.azt_cumul_time,
+      Rcpp::Named("azt_exp_cumul_time")=pow(output.azt_cumul_time,2),
+
       Rcpp::Named("azt_n_deaths")=output.azt_n_deaths,
-      Rcpp::Named("azt_avg_age")=output.azt_avg_age,
-      Rcpp::Named("azt_avg_death_age")=output.azt_avg_death_age,
+      Rcpp::Named("azt_avg_age")=output.azt_avg_age/output.azt_n_agents,
+      // Rcpp::Named("azt_avg_death_age")=output.azt_avg_death_age/output.azt_n_deaths,
 
       Rcpp::Named("azt_total_exac")=AS_VECTOR_INT(output.azt_total_exac),
-      Rcpp::Named("azt_total_gold")=AS_VECTOR_INT(output.azt_total_gold),
+      // Rcpp::Named("azt_total_gold")=AS_VECTOR_INT(output.azt_total_gold),
 
       Rcpp::Named("azt_total_cost")=output.azt_total_cost,
+      Rcpp::Named("azt_exp_total_cost")=pow(output.azt_total_cost,2),
+
       Rcpp::Named("azt_total_qaly")=output.azt_total_qaly,
+      Rcpp::Named("azt_exp_total_qaly")=pow(output.azt_total_qaly,2),
+
+      Rcpp::Named("azt_total_cost_hearing")=output.azt_total_cost_hearing,
+      Rcpp::Named("azt_total_cost_gi")=output.azt_total_cost_gi,
+
+      Rcpp::Named("azt_total_qaly_hearing")=output.azt_total_qaly_hearing,
+      Rcpp::Named("azt_total_qaly_gi")=output.azt_total_qaly_gi,
 
       Rcpp::Named("azt_n_hearing")=output.azt_n_hearing,
       Rcpp::Named("azt_n_GIs")=output.azt_n_GIs,
 
       Rcpp::Named("azt_n_bg_death")=output.azt_n_bg_death,
       Rcpp::Named("azt_n_exac_death")=output.azt_n_exac_death,
+      Rcpp::Named("azt_n_cv_death")=output.azt_n_cv_death
 
-      Rcpp::Named("azt_total_pack_years")=output.azt_total_pack_years
+      // Rcpp::Named("azt_total_pack_years")=output.azt_total_pack_years/output.azt_n_agents
 
      // add other AZT-outputs here
 // #endif
@@ -1955,6 +2061,7 @@ void medication_LPT(agent *ag)
   #endif
     // costs
     //(*ag).cumul_cost+=1;
+
         (*ag).cumul_cost+=input.cost.medication_costs[(*ag).medication_status]*((*ag).local_time-(*ag).medication_LPT)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
     // qaly
       if((*ag).gold>0 && (*ag).diagnosis>0 && (((*ag).cough==1) || ((*ag).phlegm==1) || ((*ag).wheeze==1) || ((*ag).dyspnea==1)))
@@ -2084,8 +2191,8 @@ double update_prevalent_diagnosis(agent *ag)
     {
           if (rand_unif() < input.medication.medication_adherence)
           {
-            (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
             medication_LPT(ag);
+            (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
           }
     }
 
@@ -2093,8 +2200,8 @@ double update_prevalent_diagnosis(agent *ag)
     {
           if (rand_unif() < input.medication.medication_adherence)
           {
-            (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
             medication_LPT(ag);
+            (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
           }
     }
 
@@ -2142,8 +2249,8 @@ double update_prevalent_diagnosis(agent *ag)
       {
         if (rand_unif() < input.medication.medication_adherence)
           {
-               (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
-               medication_LPT(ag);
+            medication_LPT(ag);
+            (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
           }
       }
 
@@ -2151,8 +2258,8 @@ double update_prevalent_diagnosis(agent *ag)
       {
           if (rand_unif() < input.medication.medication_adherence)
           {
-            (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
             medication_LPT(ag);
+            (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
           }
       }
 
@@ -2166,8 +2273,8 @@ double update_prevalent_diagnosis(agent *ag)
 
         (*ag).diagnosis = 0;
         (*ag).cumul_cost+=input.cost.cost_outpatient_diagnosis/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
-        (*ag).medication_status=0;
         medication_LPT(ag);
+        (*ag).medication_status=0;
         (*ag).time_at_diagnosis=0;
 
          return(0);
@@ -2204,8 +2311,8 @@ double update_prevalent_diagnosis(agent *ag)
               {
                   if (rand_unif() < input.medication.medication_adherence)
                     {
-                      (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
                       medication_LPT(ag);
+                      (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
                     }
               }
       }
@@ -2215,39 +2322,123 @@ double update_prevalent_diagnosis(agent *ag)
 }
 
 //--------------------------- AZITHROMYCIN - Safa------------------------------------------
+int check_azt_eligibility (agent *ag){
+  ////reference: > 1
+  // if ((((*ag).medication_status & 15) >= 14 )){
+  //   return 1,
+  // }
+
+  //// No history
+  if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) > 1){
+    return 1;
+  }
+
+  //// > 2 or > 1
+  // if (((*ag).notmild_exac_history_severity_first == 2 &&
+  //     (*ag).notmild_exac_history_severity_second == 2 &&
+  //     ((*ag).local_time - (*ag).notmild_exac_history_time_second ) < 1) ||
+  //     ((*ag).notmild_exac_history_severity_second > 2 &&
+  //     ((*ag).local_time - (*ag).notmild_exac_history_time_second ) < 1) ||
+  //     ((*ag).notmild_exac_history_severity_first > 2 &&
+  //     ((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1)
+  // )
+  // {
+  //   return 1;
+  // }
+
+  //// >= 2
+  // if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1)
+  // {
+  //   return 1;
+  // }
+
+  return 0;
+}
+
 double update_AZT_payoffs (agent *ag){
 
+  int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
+
   if((*ag).azt_eligible){
-    (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
-    (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*1/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    //annual GP visit
+    (*ag).cumul_cost+=input.cost.cost_GP_visit/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
 
-    // (*ag).cumul_cost+=input.cost.hearing_cost[(*ag).hearing_status];
-    // (*ag).cumul_cost+=(*ag).gastro_status*input.cost.gis_cost;
+    (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    (*ag).cumul_qaly_hearing+=input.utility.hearing_dutil[(*ag).hearing_status]/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
 
+    (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    (*ag).cumul_qaly_gi+=(*ag).gastro_status*input.utility.gis_dutil/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+
+    if((*ag).hearing_status > 0){
+      (*ag).cumul_cost+=input.cost.cost_hearing_loss_annual/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+      (*ag).cumul_cost_hearing+=input.cost.cost_hearing_loss_annual/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+      if(on_azt){ // we stop AZT for anyone with hearing loss
+        (*ag).medication_status = ((*ag).medication_status & ~MED_CLASS_MACRO);
+      }
+
+      if((*ag).hearing_status == 2){
+        int time_passed = (int)floor((*ag).local_time) - (int)floor((*ag).time_at_hearing_loss);
+        if(time_passed == 1 || time_passed == 11){
+          // Rprintf("getting assessment cost for id %d ", (*ag).id);
+          (*ag).cumul_cost+=input.cost.cost_hearing_assessment/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+          (*ag).cumul_cost_hearing+=input.cost.cost_hearing_assessment/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+
+        }
+        if(time_passed % 3 == 0 ){
+          // Rprintf("getting re-assessment cost per 3 years for id %d ", (*ag).id);
+          (*ag).cumul_cost+=input.cost.cost_hearing_loss_management/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+          (*ag).cumul_cost_hearing+=input.cost.cost_hearing_loss_management/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+        }
+      }
+    }
+    (*ag).cumul_cost+=(*ag).gastro_status*input.cost.cost_GIs/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+    (*ag).cumul_cost_gi+=(*ag).gastro_status*input.cost.cost_GIs/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+
+    if(on_azt){
+      (*ag).cumul_cost+=input.cost.annual_AZT_costs/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+    }
 
   }
+
   return (0);
 }
 
 double update_AZT(agent *ag) {  //if criteria met, update medication!
 
-// maybe I should remove (*ag).azt_eligible  == 0
-  // Rprintf("Am I here? %f\n",1);
+  int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
 
-// (*ag).gold > 2
-  if((*ag).diagnosis==1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
-     // ((*ag).notmild_exac_history_severity_first>1 && ((*ag).local_time - (*ag).notmild_exac_history_time_first) <1) &&
-      (((*ag).medication_status & 15) >= 14 )
+  if(on_azt){
+      int azt_use = (int)floor((*ag).local_time - (*ag).local_time_at_AZT);
+      if ( azt_use > 0){
+          (*ag).azt_resistance = exp(input.adv_event.resistance*(azt_use));
+          // (*ag).azt_resistance = 1; // no resistance
+      }
+      else{
+        (*ag).azt_resistance = 1;
+      }
+  }
+
+  else{
+    if( calendar_time==0 && (*ag).diagnosis==1 && (*ag).gold > 1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
+       (((*ag).medication_status & 15) >= 14)
+          // && check_azt_eligibility(ag)
     )
-  {
-    if (rand_unif() < input.medication.medication_adherence)
     {
-      (*ag).medication_status = ((*ag).medication_status | MED_CLASS_MACRO);
+      if(input.medication.is_AZT_group == 1){
+        (*ag).medication_status = ((*ag).medication_status | MED_CLASS_MACRO);
+      }
+
+      (*ag).azt_eligible  = 1;
+      (*ag).local_time_at_AZT = (*ag).local_time;
+      (*ag).azt_time_horizon = (double)input.global_parameters.time_horizon+calendar_time+(*ag).local_time_at_AZT;
+
+      (*ag).cost_pre_azt = (*ag).cumul_cost;
+      (*ag).qaly_pre_azt = (*ag).cumul_qaly;
+      for(int i = 0;i < 4;i++){
+        (*ag).exac_pre_azt[i] = (*ag).cumul_exac[i];
+      }
+
     }
-    (*ag).azt_eligible  = 1;
-    (*ag).local_time_at_AZT = (*ag).local_time;
-    (*ag).cost_pre_azt = (*ag).cumul_cost;
-    (*ag).qaly_pre_azt = (*ag).cumul_qaly;
 
   }
 
@@ -2255,29 +2446,41 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 }
 
 double update_AZT_adverse_events(agent *ag) {
-  double on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
+  int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
 
-  if((*ag).azt_eligible){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
+  if((*ag).azt_eligible == 1){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
+
+    //hearing loss:
     if ((*ag).hearing_status == 0){
-      if (rand_unif() < input.adv_event.hearing_loss_incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
 
+      double incidence = 0;
+      if(((*ag).age_at_creation+(*ag).local_time) < 70){
+        incidence = input.adv_event.hearing_loss_incidence_young_adults;
+      }
+      else{
+        incidence = input.adv_event.hearing_loss_incidence;
+      }
+
+      if (rand_unif() < incidence*(pow(input.adv_event.hearing_loss_rr,on_azt))){
         (*ag).hearing_status = 1;
         (*ag).time_at_hearing_loss = (*ag).local_time;
-        if(on_azt){ // we stop AZT for anyone with hearing loss
-          (*ag).medication_status = ((*ag).medication_status & ~MED_CLASS_MACRO);
-        }
+
       }
     }
     else{
       if((*ag).hearing_status == 1){
-        // && floor(((*ag).time_at_hearing_loss) - ((*ag).local_time)) == 1 : we don't need it because annual event is called each year. If hearing == 1 it means it has been last year => hearing = 2 , unless we set 2/3 for hearing_aid use
-        // if( rand_unif() < input.adv_event.hearing_aid_access){
-        (*ag).hearing_status = 2;
+        if( rand_unif() < input.adv_event.hearing_aid_adherence){
+          (*ag).hearing_status = 2; //will use hearing_aid lifetime
+          (*ag).cumul_cost+=input.cost.cost_hearing_aid/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+          (*ag).cumul_cost_hearing+=input.cost.cost_hearing_aid/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+        }
+        // else{
+        //   (*ag).hearing_status = 3; //will not get hearing_aid again
         // }
       }
     }
 
-
+    //GI symptoms
     if(rand_unif() < input.adv_event.gastro_prevalence*(pow(input.adv_event.gastro_rr, on_azt))){
       (*ag).gastro_status = 1; //if GI == True => assume he suffers from GI the whole year?
       ++output.azt_n_GIs;
@@ -2285,6 +2488,15 @@ double update_AZT_adverse_events(agent *ag) {
     else{
       (*ag).gastro_status = 0;
     }
+
+    //CVD in 5 days
+    if(rand_unif() < input.adv_event.cvd_prob_5days*(pow(input.adv_event.cvd_rr,on_azt))){
+      (*ag).cumul_cost+=(input.cost.cost_cvd)/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+      (*ag).alive=false;
+      (*ag).cv_status = 1;
+      output.azt_n_cv_death+=1;
+    }
+
 
   }
 
@@ -2333,14 +2545,35 @@ double _bvn[2]; //being used for joint estimation in multiple locations;
 
 (*ag).time_at_creation=calendar_time;
 (*ag).sex=rand_unif()<input.agent.p_female;
-// Rprintf("alaki-1 is %f",input.adv_event.hearing_loss_incidence);
-
-
 
 (*ag).fev1_tail = sqrt(0.1845) * rand_norm() + 0.827;
 
 double r=rand_unif();
 double cum_p=0;
+
+// #ifdef OUTPUT_AZT_CEA
+(*ag).azt_test_var = 0;
+(*ag).azt_eligible  = 0; //Safa
+(*ag).local_time_at_AZT = 0; //Safa
+(*ag).azt_time_horizon = 0; //Safa
+(*ag).hearing_status = 0; //Safa
+(*ag).gastro_status = 0; //Safa
+(*ag).cv_status = 0; //Safa
+(*ag).azt_resistance = 1;
+(*ag).time_at_hearing_loss = 0; //Safa
+(*ag).notmild_exac_history_time_first=0; //Safa
+(*ag).notmild_exac_history_time_second=0; //Safa
+(*ag).notmild_exac_history_severity_first=0;
+(*ag).notmild_exac_history_severity_second=0;
+
+(*ag).cost_pre_azt = 0;
+(*ag).qaly_pre_azt= 0;
+(*ag).exac_pre_azt[0]=0;
+(*ag).exac_pre_azt[1]=0;
+(*ag).exac_pre_azt[2]=0;
+(*ag).exac_pre_azt[3]=0;
+
+// #endif
 
 if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases; the rest are incident ones;
   for(int i=input.global_parameters.age0;i<111;i++)
@@ -2614,32 +2847,20 @@ if(id<settings.n_base_agents) //the first n_base_agent cases are prevalent cases
   }
 
 
-
-
   //payoffs;
   (*ag).cumul_cost=0;
   (*ag).cumul_qaly=0;
 
+  //safa
+  (*ag).cumul_cost_hearing=0;
+  (*ag).cumul_cost_gi=0;
+  (*ag).cumul_cost_exac=0;
+  (*ag).cumul_qaly_hearing=0;
+  (*ag).cumul_qaly_gi=0;
+  (*ag).cumul_qaly_exac=0;
+
   (*ag).payoffs_LPT=0;
 
-
-
-// #ifdef OUTPUT_AZT_CEA
-
-  (*ag).azt_eligible  = 0; //Safa
-  (*ag).local_time_at_AZT = 0; //Safa
-  (*ag).hearing_status = 0; //Safa
-  (*ag).gastro_status = 0; //Safa
-  (*ag).time_at_hearing_loss = 0; //Safa
-  (*ag).notmild_exac_history_time_first=0; //Safa
-  (*ag).notmild_exac_history_time_second=0; //Safa
-  (*ag).notmild_exac_history_severity_first=0;
-  (*ag).notmild_exac_history_severity_second=0;
-
-  (*ag).cost_pre_azt = 0;
-  (*ag).qaly_pre_azt= 0;
-
-// #endif
 
   return(ag);
 }
@@ -2741,9 +2962,29 @@ agent *event_end_process(agent *ag)
 
 // #ifdef OUTPUT_AZT_CEA
   if((*ag).azt_eligible){ //pay attention to the warning mentioned for OUPT_eX later in the function
-    double remained_period = ((*ag).local_time - floor((*ag).local_time));
-    (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*remained_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
-    (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*remained_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+    int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
+
+    double past_period = ((*ag).local_time - floor((*ag).local_time));
+    if(past_period != 0){
+      (*ag).cumul_qaly+=input.utility.hearing_dutil[(*ag).hearing_status]*past_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+      (*ag).cumul_qaly+=(*ag).gastro_status*input.utility.gis_dutil*past_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+
+      (*ag).cumul_qaly_hearing+=input.utility.hearing_dutil[(*ag).hearing_status]*past_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+      (*ag).cumul_qaly_gi+=(*ag).gastro_status*input.utility.gis_dutil*past_period/pow(1+input.global_parameters.discount_qaly,(*ag).local_time+calendar_time);
+
+      (*ag).cumul_cost+=(*ag).gastro_status*input.cost.cost_GIs*past_period/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+      (*ag).cumul_cost_gi+=(*ag).gastro_status*input.cost.cost_GIs*past_period/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+    }
+    else{
+
+      (*ag).cumul_qaly+=0;
+      (*ag).cumul_cost+=0;
+    }
+
+    if(on_azt){
+      (*ag).cumul_cost+=input.cost.annual_AZT_costs*past_period/pow(1+input.global_parameters.discount_cost,(*ag).local_time+calendar_time);
+    }
+
   }
 // #endif
 
@@ -2776,19 +3017,25 @@ agent *event_end_process(agent *ag)
 // #ifdef OUTPUT_AZT_CEA
   if((*ag).azt_eligible){
     ++output.azt_n_agents;
+
     output.azt_n_men += ((*ag).sex == 0)*1;
 
     output.azt_n_COPD+=((*ag).gold>0)*1;
-    output.azt_cumul_time+=(*ag).local_time;
+
+    output.azt_cumul_time+=(*ag).local_time-(*ag).local_time_at_AZT;
+
     output.azt_n_deaths+=!(*ag).alive;
 
     output.azt_avg_age += ((*ag).age_at_creation + (*ag).local_time_at_AZT);
-    output.azt_avg_death_age += ((*ag).alive == false)*((*ag).age_at_creation + (*ag).local_time);
 
-    output.azt_total_exac[0]+=(*ag).cumul_exac[0];
-    output.azt_total_exac[1]+=(*ag).cumul_exac[1];
-    output.azt_total_exac[2]+=(*ag).cumul_exac[2];
-    output.azt_total_exac[3]+=(*ag).cumul_exac[3];
+    if(!(*ag).alive){
+      output.azt_avg_death_age += ((*ag).age_at_creation + (*ag).local_time);
+    }
+
+    output.azt_total_exac[0]+=((*ag).cumul_exac[0]-(*ag).exac_pre_azt[0]);
+    output.azt_total_exac[1]+=((*ag).cumul_exac[1]-(*ag).exac_pre_azt[1]);
+    output.azt_total_exac[2]+=((*ag).cumul_exac[2]-(*ag).exac_pre_azt[2]);
+    output.azt_total_exac[3]+=((*ag).cumul_exac[3]-(*ag).exac_pre_azt[3]);
 
     output.azt_total_gold[(*ag).gold]+=1;
 
@@ -2796,9 +3043,28 @@ agent *event_end_process(agent *ag)
 
     output.azt_total_pack_years+=(*ag).pack_years;
 
-    output.azt_total_cost += ((*ag).cumul_cost - (*ag).cost_pre_azt)*(pow(1+input.global_parameters.discount_cost,(*ag).local_time_at_AZT+calendar_time));
-    output.azt_total_qaly += ((*ag).cumul_qaly - (*ag).qaly_pre_azt)*(pow(1+input.global_parameters.discount_qaly,(*ag).local_time_at_AZT+calendar_time));
 
+    double current_cost = (*ag).cumul_cost - (*ag).cost_pre_azt;
+    if(current_cost != 0){
+      output.azt_total_cost += current_cost/(pow(1+input.global_parameters.discount_cost,-(*ag).local_time_at_AZT-calendar_time));
+    }
+    else{
+      output.azt_total_cost += 0;
+    }
+
+    double current_qaly = (*ag).cumul_qaly - (*ag).qaly_pre_azt;
+    if(current_qaly != 0){
+      output.azt_total_qaly += current_qaly/(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time));
+    }
+    else{
+      output.azt_total_qaly += 0;
+    }
+
+    output.azt_total_cost_hearing +=((*ag).cumul_cost_hearing*(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)));
+    output.azt_total_cost_gi +=((*ag).cumul_cost_gi*(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)));
+
+    output.azt_total_qaly_hearing +=((*ag).cumul_qaly_hearing*(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)));
+    output.azt_total_qaly_gi +=((*ag).cumul_qaly_gi*(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)));
   }
 // #endif
 
@@ -2982,7 +3248,7 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 NumericMatrix Cget_all_events_matrix()
 {
 
-  int size = 37;
+  int size = 40;
 // #ifdef OUTPUT_AZT_CEA
 //   int size = 37;
 // #endif
@@ -3030,9 +3296,12 @@ NumericMatrix Cget_all_events_matrix()
   eventMatrixColNames(31) = "azt_eligible";
   eventMatrixColNames(32) = "hearing_status";
   eventMatrixColNames(33) = "gastro_status";
-  eventMatrixColNames(34) = "time_at_hearing_loss";
-  eventMatrixColNames(35) = "cost_pre_azt";
-  eventMatrixColNames(36) = "qaly_pre_azt";
+  eventMatrixColNames(34) = "cv_status";
+  eventMatrixColNames(35) = "time_at_hearing_loss";
+  eventMatrixColNames(36) = "cost_pre_azt";
+  eventMatrixColNames(37) = "qaly_pre_azt";
+  eventMatrixColNames(38) = "azt_time_horizon";
+  eventMatrixColNames(39) = "azt_resistance";
 // #endif
 
   colnames(outm) = eventMatrixColNames;
@@ -3075,9 +3344,14 @@ NumericMatrix Cget_all_events_matrix()
     outm(i,31)=(*ag).azt_eligible ;
     outm(i,32)=(*ag).hearing_status;
     outm(i,33)=(*ag).gastro_status;
-    outm(i,34)=(*ag).time_at_hearing_loss;
-    outm(i,35)=(*ag).cost_pre_azt;
-    outm(i,36)=(*ag).qaly_pre_azt;
+    outm(i,34)=(*ag).cv_status;
+    outm(i,35)=(*ag).time_at_hearing_loss;
+    outm(i,36)=(*ag).cost_pre_azt;
+    outm(i,37)=(*ag).qaly_pre_azt;
+    outm(i,38)=(*ag).azt_time_horizon;
+    outm(i,39)=(*ag).azt_resistance;
+
+
 // #endif
 
   }
@@ -3269,17 +3543,46 @@ double event_exacerbation_tte(agent *ag)
 {
   if((*ag).gold==0 || (*ag).exac_status>0) return(HUGE_VAL);
 
-  double rate=exp((*ag).ln_exac_rate_intercept
-                    +input.exacerbation.ln_rate_betas[0]
-                    +input.exacerbation.ln_rate_betas[1]*(*ag).sex
-                    +input.exacerbation.ln_rate_betas[2]*((*ag).age_at_creation+(*ag).local_time)
-                    +input.exacerbation.ln_rate_betas[3]*(*ag).fev1
-                    +input.exacerbation.ln_rate_betas[4]*(*ag).smoking_status
-                    +input.exacerbation.ln_rate_betas[5]*((*ag).gold==2)
-                    +input.exacerbation.ln_rate_betas[6]*((*ag).gold==3)
-                    +input.exacerbation.ln_rate_betas[7]*((*ag).gold==4)
 
-                    +input.medication.medication_ln_hr_exac[(*ag).medication_status] ); //safa: hazard ratio of AZT affect exac_rate
+  double medication_resistance = 1;
+  if((*ag).medication_status > 15){
+    int no_azt_index = (*ag).medication_status%16;
+    medication_resistance =
+      pow((pow(exp(input.medication.medication_ln_hr_exac[no_azt_index]),1/input.medication.medication_adherence)-1+pow((1-input.medication.AZT_effect),(*ag).azt_resistance))/(pow(exp(input.medication.medication_ln_hr_exac[no_azt_index]),1/input.medication.medication_adherence)-input.medication.AZT_effect),input.medication.medication_adherence);
+    // Rprintf("at %d beautiful resistance of %f  for %f \n", no_azt_index, medication_resistance, (*ag).azt_resistance);
+  }
+
+  double rate = 0;
+  if(input.medication.AZT_effect == 0){
+
+    int no_azt_index = ((*ag).medication_status % 16);
+    rate = exp((*ag).ln_exac_rate_intercept
+                 +input.exacerbation.ln_rate_betas[0]
+                 +input.exacerbation.ln_rate_betas[1]*(*ag).sex
+                 +input.exacerbation.ln_rate_betas[2]*((*ag).age_at_creation+(*ag).local_time)
+                 +input.exacerbation.ln_rate_betas[3]*(*ag).fev1
+                 +input.exacerbation.ln_rate_betas[4]*(*ag).smoking_status
+                 +input.exacerbation.ln_rate_betas[5]*((*ag).gold==2)
+                 +input.exacerbation.ln_rate_betas[6]*((*ag).gold==3)
+                 +input.exacerbation.ln_rate_betas[7]*((*ag).gold==4)
+                 +input.medication.medication_ln_hr_exac[no_azt_index]);
+  }
+  else{
+    rate=exp((*ag).ln_exac_rate_intercept
+               +input.exacerbation.ln_rate_betas[0]
+               +input.exacerbation.ln_rate_betas[1]*(*ag).sex
+               +input.exacerbation.ln_rate_betas[2]*((*ag).age_at_creation+(*ag).local_time)
+               +input.exacerbation.ln_rate_betas[3]*(*ag).fev1
+               +input.exacerbation.ln_rate_betas[4]*(*ag).smoking_status
+               +input.exacerbation.ln_rate_betas[5]*((*ag).gold==2)
+               +input.exacerbation.ln_rate_betas[6]*((*ag).gold==3)
+               +input.exacerbation.ln_rate_betas[7]*((*ag).gold==4)
+               +input.medication.medication_ln_hr_exac[(*ag).medication_status])*medication_resistance ;
+
+  }
+
+
+
 
   (*ag).tmp_exac_rate= rate;
 
@@ -3398,8 +3701,8 @@ void event_exacerbation_process(agent *ag)
   {
     if (rand_unif() < input.medication.medication_adherence)
         {
-        (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
         medication_LPT(ag);
+        (*ag).medication_status= max(MED_CLASS_LAMA, (*ag).medication_status);
         }
   }
 
@@ -3407,8 +3710,8 @@ void event_exacerbation_process(agent *ag)
   {
       if (rand_unif() < input.medication.medication_adherence)
         {
-        (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
         medication_LPT(ag);
+        (*ag).medication_status= max(MED_CLASS_SABA, (*ag).medication_status);
         }
   }
 
@@ -3418,8 +3721,8 @@ void event_exacerbation_process(agent *ag)
   {
         if (rand_unif() < input.medication.medication_adherence)
         {
-          (*ag).medication_status= max(MED_CLASS_LAMA | MED_CLASS_LABA, (*ag).medication_status);
           medication_LPT(ag);
+          (*ag).medication_status= max(MED_CLASS_LAMA | MED_CLASS_LABA, (*ag).medication_status);
         }
   }
 
@@ -3429,8 +3732,8 @@ void event_exacerbation_process(agent *ag)
   {
       if (rand_unif() < input.medication.medication_adherence)
         {
+        medication_LPT(ag);
           (*ag).medication_status= max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA , (*ag).medication_status);
-          medication_LPT(ag);
         }
   }
 
@@ -3456,6 +3759,7 @@ double event_exacerbation_end_tte(agent *ag)
 
 void event_exacerbation_end_process(agent *ag)
 {
+
   (*ag).cumul_cost+=input.cost.exac_dcost[(*ag).exac_status-1]/(pow(1+input.global_parameters.discount_cost,(*ag).time_at_creation+(*ag).local_time));
   (*ag).cumul_qaly+=input.utility.exac_dutil[(*ag).exac_status-1][(*ag).gold-1]/(pow(1+input.global_parameters.discount_qaly,(*ag).time_at_creation+(*ag).local_time));
 
@@ -3689,14 +3993,6 @@ double event_bgd_tte(agent *ag)
     double odds=p/(1-p)*_or;
     p=odds/(1+odds);
 
-#ifdef OUTPUT_AZT_CEA
-    double on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
-
-    if(on_azt && (*ag).azt_eligible && ((*ag).local_time-(*ag).local_time_at_AZT) < (5/365)){
-        p*= ((360+5*input.adv_event.cvd_rr)/365);
-        if (p > 1) {p = 1;}
-    }
-#endif
 
     //adjusting background mortality for current smokers
     if ((*ag).smoking_status > 1e-5) {
@@ -3841,8 +4137,8 @@ agent *event_fixed_process(agent *ag)
 #ifdef OUTPUT_AZT_CEA
   // Rprintf("this is the id %f", (*ag).id);
   update_AZT_payoffs(ag);
-  update_AZT_adverse_events(ag);
   update_AZT(ag); // Safa: criteria_met => azt_eligible  = TRUE + years in study monitored + update everything else
+  update_AZT_adverse_events(ag);
 #endif
 
 #ifdef OUTPUT_EX
@@ -4032,7 +4328,6 @@ int Cinit_session() //Does not deal with memory allocation only resets counters 
 }
 
 
-
 // [[Rcpp::export]]
 int Cmodel(int max_n_agents)
 {
@@ -4040,9 +4335,11 @@ int Cmodel(int max_n_agents)
 
   agent *ag;
 
+
   while(calendar_time<input.global_parameters.time_horizon && max_n_agents>0)
     //for(int i=0;i<n_agents;i++)
   {
+
     max_n_agents--;
     //calendar_time=0; NO! calendar_time is set to zero at init_session. Cmodel should be resumable;
 
@@ -4067,24 +4364,26 @@ int Cmodel(int max_n_agents)
     (*ag).tte=0;
     event_start_process(ag);
     (*ag).event=event_start;
-    if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
-    {
-      int _res=push_event(ag);
-      if(_res<0) return(_res);
-    }
+    // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
+    // {
+    //   int _res=push_event(ag);
+    //   if(_res<0) return(_res);
+    // }
 
 
     while(
       (((calendar_time+(*ag).local_time)<input.global_parameters.time_horizon)
             // for AZT_CEA we want to follow all agents for 20 years so calendar_time is not important
-        | ((*ag).azt_eligible && ((*ag).local_time<(input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
+        || ((*ag).azt_eligible && calendar_time==0 &&((calendar_time+(*ag).local_time)<(*ag).azt_time_horizon))
       )
         && (*ag).alive && ((*ag).age_at_creation+(*ag).local_time)<MAX_AGE)
     {
+
       double tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
       if((*ag).azt_eligible){
-        tte += (*ag).local_time_at_AZT;
+        tte += (*ag).local_time_at_AZT+calendar_time;
       }
+
       int winner=-1;
       double temp;
 
@@ -4174,9 +4473,27 @@ int Cmodel(int max_n_agents)
       }
 
 
-      if(((calendar_time+(*ag).local_time+tte)<input.global_parameters.time_horizon) |
-         ((*ag).azt_eligible && ((*ag).local_time+tte)<(input.global_parameters.time_horizon+(*ag).local_time_at_AZT)))
+      if(((calendar_time+(*ag).local_time+tte-input.global_parameters.time_horizon) < 0) ||
+         // ((*ag).azt_eligible && ((*ag).local_time+tte-(*ag).local_time_at_AZT-input.global_parameters.time_horizon)<0))
+        ((*ag).azt_eligible  && calendar_time==0 && (calendar_time+(*ag).local_time+tte-(*ag).azt_time_horizon) < 0))
+
+
       {
+
+        if (winner == -1 && (*ag).azt_eligible) {
+          Rprintf("%d\n",(*ag).id);
+          (*ag).azt_test_var = 1;
+          Rprintf("%f\n",tte);// very small
+          Rprintf(typeid(tte).name());
+
+          Rprintf("%f\n",(*ag).azt_time_horizon );// very small
+          Rprintf(typeid((*ag).azt_time_horizon ).name());
+
+          Rprintf("%f\n",(*ag).local_time);// very small
+          Rprintf(typeid((*ag).local_time).name());
+
+        }
+
         (*ag).tte=tte;
         (*ag).local_time=(*ag).local_time+tte;
 
@@ -4240,29 +4557,30 @@ int Cmodel(int max_n_agents)
           (*ag).event=event_bgd;
           break;
         }
-        if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_some_event)
-        {
-          int _res=push_event(ag);
-          if(_res<0) return(_res);
-        }
+        // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_some_event)
+        // {
+        //   int _res=push_event(ag);
+        //   if(_res<0) return(_res);
+        // }
       }
       else
       {//past TH, set the local time to TH as the next step will be agent end;
         (*ag).tte=input.global_parameters.time_horizon-calendar_time-(*ag).local_time;
         if((*ag).azt_eligible){
-          tte += (*ag).local_time_at_AZT;
+          (*ag).tte += (*ag).local_time_at_AZT+calendar_time;
         }
         (*ag).local_time=(*ag).local_time+(*ag).tte;
+
       }
     }//while (within agent)
 
     event_end_process(ag);
     (*ag).event=event_end;
-    if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
-    {
-      int _res=push_event(ag);
-      if(_res<0) return(_res);
-    }
+    // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
+    // {
+    //   int _res=push_event(ag);
+    //   if(_res<0) return(_res);
+    // }
 
     if (output.n_agents>settings.n_base_agents)  //now we are done with prevalent cases and are creating incident cases;
       {
