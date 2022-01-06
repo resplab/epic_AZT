@@ -1527,9 +1527,12 @@ struct output
 
   int azt_total_exac[4];    //0:mild, 1:moderae, 2:severe; 3=very severe    END because agent records
   int azt_total_gold[4];    //0:mild, 1:moderae, 2:severe; 3=very severe    END because agent records
+  int azt_exp_total_exacs;
 
   double azt_total_cost;    //END because agent records
+  double azt_exp_total_cost;
   double azt_total_qaly;  //END because agent records
+  double azt_exp_total_qaly;
 
   double azt_total_cost_hearing;    //END because agent records
   double azt_total_cost_gi;    //END because agent records
@@ -1591,6 +1594,7 @@ void reset_output()
   output.azt_n_men=0;
 
   output.azt_cumul_time=0;
+
   output.azt_n_deaths=0;
   output.azt_n_COPD=0;
   output.azt_avg_age=0;
@@ -1599,8 +1603,12 @@ void reset_output()
   output.azt_total_exac[0]=0;output.azt_total_exac[1]=0;output.azt_total_exac[2]=0;output.azt_total_exac[3]=0;
   output.azt_total_gold[0]=0;output.azt_total_gold[1]=0;output.azt_total_gold[2]=0;output.azt_total_gold[3]=0;
 
+  output.azt_exp_total_exacs=0;
+
   output.azt_total_cost=0;
   output.azt_total_qaly=0;
+  output.azt_exp_total_cost=0;
+  output.azt_exp_total_qaly=0;
 
   output.azt_total_cost_hearing=0;
   output.azt_total_qaly_hearing=0;
@@ -1644,20 +1652,20 @@ List Cget_output()
     // Rcpp::Named("azt_n_men")=output.azt_n_men,
 
       Rcpp::Named("azt_cumul_time")=output.azt_cumul_time,
-      Rcpp::Named("azt_exp_cumul_time")=pow(output.azt_cumul_time,2),
 
-      Rcpp::Named("azt_n_deaths")=output.azt_n_deaths,
+      // Rcpp::Named("azt_n_deaths")=output.azt_n_deaths,
       Rcpp::Named("azt_avg_age")=output.azt_avg_age/output.azt_n_agents,
       // Rcpp::Named("azt_avg_death_age")=output.azt_avg_death_age/output.azt_n_deaths,
 
       Rcpp::Named("azt_total_exac")=AS_VECTOR_INT(output.azt_total_exac),
-      // Rcpp::Named("azt_total_gold")=AS_VECTOR_INT(output.azt_total_gold),
+      Rcpp::Named("azt_total_gold")=AS_VECTOR_INT(output.azt_total_gold),
+      Rcpp::Named("azt_exp_total_exacs")=output.azt_exp_total_exacs,
 
       Rcpp::Named("azt_total_cost")=output.azt_total_cost,
-      Rcpp::Named("azt_exp_total_cost")=pow(output.azt_total_cost,2),
+      Rcpp::Named("azt_exp_total_cost")=output.azt_exp_total_cost,
 
       Rcpp::Named("azt_total_qaly")=output.azt_total_qaly,
-      Rcpp::Named("azt_exp_total_qaly")=pow(output.azt_total_qaly,2),
+      Rcpp::Named("azt_exp_total_qaly")=output.azt_exp_total_qaly,
 
       Rcpp::Named("azt_total_cost_hearing")=output.azt_total_cost_hearing,
       Rcpp::Named("azt_total_cost_gi")=output.azt_total_cost_gi,
@@ -2323,34 +2331,27 @@ double update_prevalent_diagnosis(agent *ag)
 
 //--------------------------- AZITHROMYCIN - Safa------------------------------------------
 int check_azt_eligibility (agent *ag){
-  ////reference: > 1
+  // Reference: > 1
   // if ((((*ag).medication_status & 15) >= 14 )){
-  //   return 1,
+  //   return 1;
   // }
 
-  //// No history
-  if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) > 1){
-    return 1;
+  // // No history
+  // if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) >= 1 ){
+  //   return 1;
+  // }
+
+  // // // >= 1
+  // if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1  && (*ag).notmild_exac_history_severity_first > 1){
+  //   return 1;
+  // }
+
+  // >=2 | > 1
+  if ((((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1  && (*ag).notmild_exac_history_severity_first > 2)
+        || ((((*ag).local_time - (*ag).notmild_exac_history_time_second) < 1  && (*ag).notmild_exac_history_severity_second >= 2) &&
+           (((*ag).local_time - (*ag).notmild_exac_history_time_first) < 1  && (*ag).notmild_exac_history_severity_first >= 2))){
+      return 1;
   }
-
-  //// > 2 or > 1
-  // if (((*ag).notmild_exac_history_severity_first == 2 &&
-  //     (*ag).notmild_exac_history_severity_second == 2 &&
-  //     ((*ag).local_time - (*ag).notmild_exac_history_time_second ) < 1) ||
-  //     ((*ag).notmild_exac_history_severity_second > 2 &&
-  //     ((*ag).local_time - (*ag).notmild_exac_history_time_second ) < 1) ||
-  //     ((*ag).notmild_exac_history_severity_first > 2 &&
-  //     ((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1)
-  // )
-  // {
-  //   return 1;
-  // }
-
-  //// >= 2
-  // if (((*ag).local_time - (*ag).notmild_exac_history_time_first ) < 1)
-  // {
-  //   return 1;
-  // }
 
   return 0;
 }
@@ -2403,7 +2404,7 @@ double update_AZT_payoffs (agent *ag){
   return (0);
 }
 
-double update_AZT(agent *ag) {  //if criteria met, update medication!
+double update_AZT(agent *ag) {  //if criteria is met, update medication!
 
   int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
 
@@ -2419,13 +2420,16 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
   }
 
   else{
-    if( calendar_time==0 && (*ag).diagnosis==1 && (*ag).gold > 1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0 &&
-       (((*ag).medication_status & 15) >= 14)
-          // && check_azt_eligibility(ag)
-    )
+    if( calendar_time==0 && (*ag).diagnosis==1 && (*ag).gold > 1 && (*ag).azt_eligible  == 0 && (*ag).hearing_status == 0
+       && check_azt_eligibility(ag) )
+
     {
       if(input.medication.is_AZT_group == 1){
-        (*ag).medication_status = ((*ag).medication_status | MED_CLASS_MACRO);
+        (*ag).medication_status = max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA| MED_CLASS_MACRO , (*ag).medication_status);
+      }
+
+      else{
+        (*ag).medication_status = max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA, (*ag).medication_status);
       }
 
       (*ag).azt_eligible  = 1;
@@ -2448,7 +2452,7 @@ double update_AZT(agent *ag) {  //if criteria met, update medication!
 double update_AZT_adverse_events(agent *ag) {
   int on_azt = (((*ag).medication_status >> (N_MED_CLASS - 1)) & 1);
 
-  if((*ag).azt_eligible == 1){ // Safa: only for agents who are included in this study, but I don't exclude agents who had hearing_loss the first time eligible for AZT, need to be checked later in the result to see how many of agents have such condition
+  if((*ag).azt_eligible == 1){
 
     //hearing loss:
     if ((*ag).hearing_status == 0){
@@ -3037,6 +3041,9 @@ agent *event_end_process(agent *ag)
     output.azt_total_exac[2]+=((*ag).cumul_exac[2]-(*ag).exac_pre_azt[2]);
     output.azt_total_exac[3]+=((*ag).cumul_exac[3]-(*ag).exac_pre_azt[3]);
 
+    int total_mod_exacs  = ((*ag).cumul_exac[1]-(*ag).exac_pre_azt[1])+((*ag).cumul_exac[2]-(*ag).exac_pre_azt[2])+((*ag).cumul_exac[3]-(*ag).exac_pre_azt[3]);
+    output.azt_exp_total_exacs += pow(total_mod_exacs,2);
+
     output.azt_total_gold[(*ag).gold]+=1;
 
     output.azt_n_hearing+=((*ag).hearing_status>=1)*1;
@@ -3047,17 +3054,21 @@ agent *event_end_process(agent *ag)
     double current_cost = (*ag).cumul_cost - (*ag).cost_pre_azt;
     if(current_cost != 0){
       output.azt_total_cost += current_cost/(pow(1+input.global_parameters.discount_cost,-(*ag).local_time_at_AZT-calendar_time));
+      output.azt_exp_total_cost += pow(current_cost/(pow(1+input.global_parameters.discount_cost,-(*ag).local_time_at_AZT-calendar_time)),2);
     }
     else{
       output.azt_total_cost += 0;
+      output.azt_exp_total_cost += 0;
     }
 
     double current_qaly = (*ag).cumul_qaly - (*ag).qaly_pre_azt;
     if(current_qaly != 0){
       output.azt_total_qaly += current_qaly/(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time));
+      output.azt_exp_total_qaly += pow(current_qaly/(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)),2);
     }
     else{
       output.azt_total_qaly += 0;
+      output.azt_exp_total_qaly += 0;
     }
 
     output.azt_total_cost_hearing +=((*ag).cumul_cost_hearing*(pow(1+input.global_parameters.discount_qaly,-(*ag).local_time_at_AZT-calendar_time)));
@@ -3247,6 +3258,7 @@ DataFrame Cget_all_events() //Returns all events from all agents;
 // [[Rcpp::export]]
 NumericMatrix Cget_all_events_matrix()
 {
+
 
   int size = 40;
 // #ifdef OUTPUT_AZT_CEA
@@ -3650,13 +3662,13 @@ void event_exacerbation_process(agent *ag)
 #endif
 
 #if (OUTPUT_EX & OUTPUT_EX_EXACERBATION)>0
-  output_ex.n_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1; //safa: what is this? In each year how many exacerbations we had for different ages?
-  output_ex.n_exac_by_ctime_severity[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1; //safa: number of severe exacs for each year
+  output_ex.n_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1;
+  output_ex.n_exac_by_ctime_severity[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
   output_ex.n_exac_by_gold_severity[(*ag).gold-1][(*ag).exac_status-1]+=1;
   if ((*ag).diagnosis==1) output_ex.n_exac_by_gold_severity_diagnosed[(*ag).gold-1][(*ag).exac_status-1]+=1;
   output_ex.n_exac_by_ctime_severity_female[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=(*ag).sex;
   output_ex.n_exac_by_ctime_GOLD[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).gold-1]+=1;
-  if ((*ag).exac_status > 2) output_ex.n_severep_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1; //safa: number of severe exacs for each year and age
+  if ((*ag).exac_status > 2) output_ex.n_severep_exac_by_ctime_age[(int)floor((*ag).time_at_creation+(*ag).local_time)][(int)(floor((*ag).age_at_creation+(*ag).local_time))]+=1;
   if ((*ag).diagnosis==0 && (*ag).gold>0) output_ex.n_exac_by_ctime_severity_undiagnosed[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
   if ((*ag).diagnosis==1 && (*ag).gold>0) output_ex.n_exac_by_ctime_severity_diagnosed[(int)floor((*ag).time_at_creation+(*ag).local_time)][(*ag).exac_status-1]+=1;
 
@@ -3716,7 +3728,7 @@ void event_exacerbation_process(agent *ag)
   }
 
   if((*ag).diagnosis==1 && (*ag).dyspnea==0 && (((*ag).exac_status>2) |
-     ((*ag).exac_history_severity_first==2 && ((*ag).local_time - (*ag).exac_history_time_first) <1 && // safa: shouldn't you update the history after all these?
+     ((*ag).exac_history_severity_first==2 && ((*ag).local_time - (*ag).exac_history_time_first) <1 &&
      (*ag).exac_history_severity_second==2 && ((*ag).local_time - (*ag).exac_history_time_second) <1)))
   {
         if (rand_unif() < input.medication.medication_adherence)
@@ -3726,14 +3738,15 @@ void event_exacerbation_process(agent *ag)
         }
   }
 
+  //REEFERENCE
   if((*ag).diagnosis==1 && (*ag).dyspnea==1 && (((*ag).exac_status>2) |
      ((*ag).exac_history_severity_first==2 && ((*ag).local_time - (*ag).exac_history_time_first) <1 &&
      (*ag).exac_history_severity_second==2 && ((*ag).local_time - (*ag).exac_history_time_second) <1)))
   {
       if (rand_unif() < input.medication.medication_adherence)
         {
-        medication_LPT(ag);
-          (*ag).medication_status= max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA , (*ag).medication_status);
+          medication_LPT(ag);
+          (*ag).medication_status = max(MED_CLASS_ICS | MED_CLASS_LAMA | MED_CLASS_LABA , (*ag).medication_status);
         }
   }
 
@@ -4364,11 +4377,11 @@ int Cmodel(int max_n_agents)
     (*ag).tte=0;
     event_start_process(ag);
     (*ag).event=event_start;
-    // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
-    // {
-    //   int _res=push_event(ag);
-    //   if(_res<0) return(_res);
-    // }
+    if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
+    {
+      int _res=push_event(ag);
+      if(_res<0) return(_res);
+    }
 
 
     while(
@@ -4557,11 +4570,11 @@ int Cmodel(int max_n_agents)
           (*ag).event=event_bgd;
           break;
         }
-        // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_some_event)
-        // {
-        //   int _res=push_event(ag);
-        //   if(_res<0) return(_res);
-        // }
+        if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_some_event)
+        {
+          int _res=push_event(ag);
+          if(_res<0) return(_res);
+        }
       }
       else
       {//past TH, set the local time to TH as the next step will be agent end;
@@ -4576,11 +4589,11 @@ int Cmodel(int max_n_agents)
 
     event_end_process(ag);
     (*ag).event=event_end;
-    // if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
-    // {
-    //   int _res=push_event(ag);
-    //   if(_res<0) return(_res);
-    // }
+    if(settings.record_mode==record_mode_event || settings.record_mode==record_mode_agent || settings.record_mode==record_mode_some_event)
+    {
+      int _res=push_event(ag);
+      if(_res<0) return(_res);
+    }
 
     if (output.n_agents>settings.n_base_agents)  //now we are done with prevalent cases and are creating incident cases;
       {

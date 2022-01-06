@@ -699,7 +699,7 @@ init_input <- function() {
   input_help$cost$cost_GIs <- "Cost of gastrointestinal symptoms"
 
 
-  input$cost$cost_cvd <- 39044.3
+  input$cost$cost_cvd <- 24870 #20794*1.196
   input_help$cost$cost_cvd <- "Look at the table of manuscript"
 
   input$cost$cost_GP_visit <- 84.45
